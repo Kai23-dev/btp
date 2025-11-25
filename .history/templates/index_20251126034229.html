@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hydrological Analysis Tool (Open-Meteo)</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+    <style>
+        :root { 
+            --primary: #2c3e50; 
+            --accent: #3498db; 
+            --bg: #f4f7f6; 
+            --success: #27ae60;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+        }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: var(--bg); 
+            margin: 0; 
+            padding: 20px; 
+            color: #333; 
+        }
+        
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 25px; 
+            border-radius: 10px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+        }
+        
+        h1 { 
+            color: var(--primary); 
+            border-bottom: 2px solid var(--accent); 
+            padding-bottom: 10px; 
+            margin-bottom: 20px;
+        }
+        
+        .controls { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+            gap: 15px; 
+            margin-bottom: 25px; 
+            background: #eef2f3; 
+            padding: 20px; 
+            border-radius: 8px; 
+        }
+        .control-group { 
+            display: flex; 
+            flex-direction: column; 
+        }
+        label { 
+            font-weight: bold; 
+            margin-bottom: 5px; 
+            font-size: 0.9em; 
+            color: #555; 
+        }
+        input, select { 
+            padding: 8px; 
+            border: 1px solid #ccc; 
+            border-radius: 4px; 
+            font-size: 14px;
+        }
+        
+        .btn-group { 
+            grid-column: 1 / -1; 
+            display: flex; 
+            gap: 10px; 
+            margin-top: 10px; 
+            flex-wrap: wrap;
+        }
+        button { 
+            padding: 10px 20px; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            transition: 0.3s; 
+            font-size: 14px;
+        }
+        .btn-calc { 
+            background: var(--accent); 
+            color: white; 
+        }
+        .btn-calc:hover { 
+            background: #2980b9; 
+        }
+        .btn-export { 
+            background: var(--success); 
+            color: white; 
+        }
+        .btn-export:hover:not(:disabled) { 
+            background: #219652; 
+        }
+        .btn-export:disabled { 
+            background: #95a5a6; 
+            cursor: not-allowed; 
+        }
+
+        .stats-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
+            gap: 20px; 
+            margin-bottom: 30px; 
+        }
+        .stat-card { 
+            background: #fff; 
+            padding: 20px; 
+            border-radius: 8px; 
+            border-left: 5px solid var(--accent); 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
+        }
+        .stat-card.success { border-left-color: var(--success); }
+        .stat-card.warning { border-left-color: var(--warning); }
+        .stat-card.danger { border-left-color: var(--danger); }
+        
+        .stat-card h3 { 
+            margin: 0 0 10px 0; 
+            font-size: 1em; 
+            color: #7f8c8d; 
+        }
+        .stat-card .value { 
+            font-size: 1.8em; 
+            font-weight: bold; 
+            color: var(--primary); 
+        }
+        .stat-card .sub { 
+            font-size: 0.8em; 
+            color: #7f8c8d; 
+            margin-top: 5px;
+        }
+
+        .charts-container { 
+            display: grid; 
+            grid-template-columns: 1fr; 
+            gap: 30px; 
+            margin-bottom: 30px; 
+        }
+        .chart-wrapper {
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        canvas { 
+            width: 100% !important;
+            height: 300px !important;
+        }
+
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 20px; 
+            font-size: 0.9em; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        th, td { 
+            padding: 12px; 
+            text-align: left; 
+            border-bottom: 1px solid #ddd; 
+        }
+        th { 
+            background-color: var(--primary); 
+            color: white; 
+            position: sticky;
+            top: 0;
+        }
+        tr:hover { 
+            background-color: #f1f1f1; 
+        }
+
+        .loader { 
+            display: none; 
+            color: var(--accent); 
+            font-weight: bold; 
+            margin-top: 10px; 
+            text-align: center;
+            padding: 10px;
+        }
+        .error { 
+            color: var(--danger); 
+            font-weight: bold; 
+            margin-top: 10px; 
+            padding: 10px;
+            background: rgba(231, 76, 60, 0.1);
+            border-radius: 4px;
+            display: none;
+        }
+        
+        .info-box {
+            background: #e8f4fd;
+            border-left: 4px solid var(--accent);
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        
+        @media (max-width: 768px) {
+            .controls {
+                grid-template-columns: 1fr;
+            }
+            .btn-group {
+                flex-direction: column;
+            }
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🌊 Hydrological Parameter Calculator</h1>
+    
+    <div class="info-box">
+        <strong>📊 Real Data Source:</strong> Open-Meteo Historical Weather API | 
+        <strong>🧮 Methodology:</strong> Hershfield PMP with Extreme Value Analysis |
+        <strong>🎯 Output:</strong> AMDP, PMP, Climate Statistics with Uncertainty
+    </div>
+
+    <form id="hydroForm" class="controls">
+        <div class="control-group">
+            <label for="lat">📍 Latitude</label>
+            <input type="number" id="lat" value="19.0760" step="0.0001" min="-90" max="90" required>
+        </div>
+        <div class="control-group">
+            <label for="lon">📍 Longitude</label>
+            <input type="number" id="lon" value="72.8777" step="0.0001" min="-180" max="180" required>
+        </div>
+        <div class="control-group">
+            <label for="startYear">📅 Start Year</label>
+            <input type="number" id="startYear" value="2018" min="1940" max="2023" required>
+        </div>
+        <div class="control-group">
+            <label for="endYear">📅 End Year</label>
+            <input type="number" id="endYear" value="2023" min="1941" max="2024" required>
+        </div>
+        <div class="control-group">
+            <label for="climateFactor" title="Adjusts PMP based on climate change projections">🌡️ Climate Adjustment (%)</label>
+            <input type="number" id="climateFactor" value="7" min="0" max="50" step="0.1">
+        </div>
+        
+        <div class="btn-group">
+            <button type="submit" class="btn-calc">
+                📡 Fetch Data & Calculate
+            </button>
+            <button type="button" id="btnExport" class="btn-export" disabled>
+                💾 Export CSV
+            </button>
+        </div>
+        
+        <div id="loader" class="loader">
+            <div>🔄 Requesting analysis from server...</div>
+            <div style="font-size: 0.8em; margin-top: 5px;">This may take 10-30 seconds for long date ranges</div>
+        </div>
+        <div id="errorMsg" class="error"></div>
+    </form>
+
+    <div class="stats-grid" id="statsOutput">
+        <!-- Dynamic content will be inserted here -->
+    </div>
+
+    <div class="charts-container">
+        <div class="chart-wrapper">
+            <canvas id="amdpChart"></canvas>
+        </div>
+        <div class="chart-wrapper">
+            <canvas id="precipitationChart"></canvas>
+        </div>
+        <div class="chart-wrapper">
+            <canvas id="climateChart"></canvas>
+        </div>
+    </div>
+
+    <h3>📈 Annual Hydrological Analysis</h3>
+    <div style="overflow-x:auto; max-height: 400px; overflow-y: auto;">
+        <table id="dataTable">
+            <thead>
+                <tr>
+                    <th>Year</th>
+                    <th>AMDP (mm)</th>
+                    <th>Total Precip (mm)</th>
+                    <th>Avg Temp (°C)</th>
+                    <th>Max Temp (°C)</th>
+                    <th>Min Temp (°C)</th>
+                    <th>Avg Wind (km/h)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td colspan="7" style="text-align: center; padding: 20px;">No data loaded yet. Enter coordinates and click "Fetch Data & Calculate"</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // Global variables
+    let globalProcessedData = [];
+    let charts = {};
+    let currentAnalysis = null;
+
+    // Initialize when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        const currentYear = new Date().getFullYear();
+        document.getElementById('endYear').value = currentYear;
+        document.getElementById('startYear').value = currentYear - 5;
+    });
+
+    // Form handler: now calls backend API
+    document.getElementById('hydroForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const lat = parseFloat(document.getElementById('lat').value);
+        const lon = parseFloat(document.getElementById('lon').value);
+        const startYear = parseInt(document.getElementById('startYear').value);
+        const endYear = parseInt(document.getElementById('endYear').value);
+        const climateFactor = parseFloat(document.getElementById('climateFactor').value) / 100;
+
+        if (startYear >= endYear) { showError("Start year must be before end year"); return; }
+
+        if (endYear - startYear > 30) {
+            if (!confirm(`You've selected ${endYear - startYear + 1} years. This may take a while. Continue?`)) return;
+        }
+
+        document.getElementById('loader').style.display = 'block';
+        showError('');
+        document.getElementById('btnExport').disabled = true;
+
+        try {
+            const resp = await fetch('/api/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ lat, lon, startYear, endYear, climateFactor })
+            });
+
+            if (!resp.ok) {
+                const err = await resp.json().catch(() => ({}));
+                throw new Error(err.error || 'Server analysis failed');
+            }
+
+            const json = await resp.json();
+            const annualData = json.annualData;
+            const analysisResults = json.analysisResults;
+
+            globalProcessedData = annualData;
+            currentAnalysis = analysisResults;
+
+            updateStatisticsDisplay(analysisResults);
+            updateDataTable(annualData);
+            updateCharts(annualData, analysisResults);
+
+            document.getElementById('btnExport').disabled = false;
+        } catch (err) {
+            console.error(err);
+            showError('Error: ' + err.message);
+        } finally {
+            document.getElementById('loader').style.display = 'none';
+        }
+    });
+
+    // UI update functions (mostly same as before)
+    function updateStatisticsDisplay(results) {
+        const container = document.getElementById('statsOutput');
+        const climateText = results.climateAdjustment > 0 ?
+            `<div class="sub">Includes +${(results.climateAdjustment * 100).toFixed(1)}% climate adjustment</div>` :
+            `<div class="sub">No climate adjustment applied</div>`;
+
+        container.innerHTML = `
+            <div class="stat-card danger">
+                <h3>🚨 Probable Maximum Precipitation (PMP)</h3>
+                <div class="value">${results.pmp.toFixed(1)} mm</div>
+                <div class="sub">Confidence: ${results.confidenceInterval.lower.toFixed(1)} - ${results.confidenceInterval.upper.toFixed(1)} mm</div>
+                ${climateText}
+            </div>
+            <div class="stat-card success">
+                <h3>📊 Mean AMDP</h3>
+                <div class="value">${results.meanAMDP.toFixed(1)} mm</div>
+                <div class="sub">Based on ${results.dataPoints} years of data</div>
+            </div>
+            <div class="stat-card warning">
+                <h3>📈 Variability (CV)</h3>
+                <div class="value">${results.variability.toFixed(1)}%</div>
+                <div class="sub">Std Dev: ${results.stdAMDP.toFixed(1)} mm</div>
+            </div>
+            <div class="stat-card">
+                <h3>🎯 Frequency Factor (Km)</h3>
+                <div class="value">${results.frequencyFactor.toFixed(1)}</div>
+                <div class="sub">Hershfield Method</div>
+            </div>
+        `;
+    }
+
+    function updateDataTable(data) {
+        const tbody = document.querySelector('#dataTable tbody');
+        tbody.innerHTML = data.map(row => `
+            <tr>
+                <td><strong>${row.year}</strong></td>
+                <td>${row.amdp.toFixed(1)}</td>
+                <td>${row.totalPrecip.toFixed(0)}</td>
+                <td>${row.avgTemp !== null ? row.avgTemp.toFixed(1) : 'N/A'}</td>
+                <td>${row.maxTemp !== null ? row.maxTemp.toFixed(1) : 'N/A'}</td>
+                <td>${row.minTemp !== null ? row.minTemp.toFixed(1) : 'N/A'}</td>
+                <td>${row.avgWind !== null ? row.avgWind.toFixed(1) : 'N/A'}</td>
+            </tr>
+        `).join('');
+    }
+
+    function updateCharts(data, results) {
+        const years = data.map(d => d.year);
+        const amdps = data.map(d => d.amdp);
+        const totalPrecip = data.map(d => d.totalPrecip);
+        const temperatures = data.map(d => d.avgTemp).filter(t => t !== null);
+        
+        renderChart('amdpChart', {
+            type: 'line',
+            data: {
+                labels: years,
+                datasets: [
+                    {
+                        label: 'Annual Maximum Daily Precipitation (AMDP)',
+                        data: amdps,
+                        borderColor: '#e74c3c',
+                        backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true
+                    },
+                    {
+                        label: 'Calculated PMP',
+                        data: Array(years.length).fill(results.pmp),
+                        borderColor: '#2c3e50',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        pointRadius: 0,
+                        fill: false
+                    },
+                    {
+                        label: 'Mean AMDP',
+                        data: Array(years.length).fill(results.meanAMDP),
+                        borderColor: '#3498db',
+                        borderWidth: 1,
+                        pointRadius: 0,
+                        fill: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: { title: { display: true, text: 'Extreme Precipitation Analysis (AMDP vs PMP)' }, tooltip: { mode: 'index', intersect: false } },
+                scales: { y: { beginAtZero: true, title: { display: true, text: 'Precipitation (mm)' } }, x: { title: { display: true, text: 'Year' } } }
+            }
+        });
+
+        renderChart('precipitationChart', {
+            type: 'bar',
+            data: { labels: years, datasets: [{ label: 'Total Annual Precipitation', data: totalPrecip, backgroundColor: '#3498db', borderColor: '#2980b9', borderWidth: 1 }] },
+            options: { responsive: true, plugins: { title: { display: true, text: 'Total Annual Precipitation' } }, scales: { y: { beginAtZero: true, title: { display: true, text: 'Precipitation (mm)' } } } }
+        });
+
+        if (temperatures.length > 0) {
+            renderChart('climateChart', {
+                type: 'line',
+                data: {
+                    labels: years.slice(-temperatures.length),
+                    datasets: [
+                        { label: 'Average Temperature', data: temperatures, borderColor: '#e67e22', backgroundColor: 'rgba(230, 126, 34, 0.1)', yAxisID: 'y', fill: true },
+                        { label: 'AMDP', data: amdps.slice(-temperatures.length), borderColor: '#e74c3c', backgroundColor: 'rgba(231, 76, 60, 0.1)', yAxisID: 'y1', fill: true }
+                    ]
+                },
+                options: { responsive: true, plugins: { title: { display: true, text: 'Temperature vs Extreme Precipitation' } }, scales: { y: { type: 'linear', display: true, position: 'left', title: { display: true, text: 'Temperature (°C)' } }, y1: { type: 'linear', display: true, position: 'right', title: { display: true, text: 'Precipitation (mm)' }, grid: { drawOnChartArea: false } } } }
+            });
+        }
+    }
+
+    function renderChart(canvasId, config) {
+        if (charts[canvasId]) charts[canvasId].destroy();
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        charts[canvasId] = new Chart(ctx, config);
+    }
+
+    // CSV export (client-side using the backend-processed data)
+    document.getElementById('btnExport').addEventListener('click', function() {
+        if (!globalProcessedData.length) return;
+        const headers = ['Year', 'AMDP (mm)', 'Total Precipitation (mm)', 'Avg Temp (°C)', 'Max Temp (°C)', 'Min Temp (°C)', 'Avg Wind Speed (km/h)', 'Data Points'];
+        let csvContent = headers.join(',') + '\n';
+        globalProcessedData.forEach(row => {
+            const csvRow = [row.year, row.amdp.toFixed(2), row.totalPrecip.toFixed(2), row.avgTemp !== null ? row.avgTemp.toFixed(2) : 'N/A', row.maxTemp !== null ? row.maxTemp.toFixed(2) : 'N/A', row.minTemp !== null ? row.minTemp.toFixed(2) : 'N/A', row.avgWind !== null ? row.avgWind.toFixed(2) : 'N/A', row.dataPoints];
+            csvContent += csvRow.join(',') + '\n';
+        });
+
+        if (currentAnalysis) {
+            const results = currentAnalysis;
+            csvContent += '\nSummary Statistics\n';
+            csvContent += `Parameter,Value,Units\n`;
+            csvContent += `PMP,${results.pmp.toFixed(2)},mm\n`;
+            csvContent += `Mean AMDP,${results.meanAMDP.toFixed(2)},mm\n`;
+            csvContent += `Std Dev AMDP,${results.stdAMDP.toFixed(2)},mm\n`;
+            csvContent += `Frequency Factor (Km),${results.frequencyFactor.toFixed(2)},-\n`;
+            csvContent += `Climate Adjustment,${(results.climateAdjustment * 100).toFixed(1)},%\n`;
+            csvContent += `Data Years,${results.yearsCovered},years\n`;
+        }
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        saveAs(blob, `hydrological_analysis_${Date.now()}.csv`);
+    });
+
+    function showError(message) {
+        const errorElement = document.getElementById('errorMsg');
+        if (message) {
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+        } else {
+            errorElement.style.display = 'none';
+        }
+    }
+
+    document.getElementById('startYear').addEventListener('change', function() {
+        const startYear = parseInt(this.value);
+        const endYear = parseInt(document.getElementById('endYear').value);
+        if (startYear >= endYear) this.value = endYear - 1;
+    });
+
+    document.getElementById('endYear').addEventListener('change', function() {
+        const startYear = parseInt(document.getElementById('startYear').value);
+        const endYear = parseInt(this.value);
+        if (endYear <= startYear) this.value = startYear + 1;
+    });
+
+</script>
+
+</body>
+</html>
