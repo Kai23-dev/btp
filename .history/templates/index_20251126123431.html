@@ -7,10 +7,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
     <!-- Leaflet for interactive map (no API key required) -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-    <!-- Project-specific map module -->
-    <script src="{{ url_for('static', filename='js/map.js') }}" defer></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-sA+e2gM9mCmqw7H5qF5S2m4Kjug0Y3gB8g1B3rs6hEI=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-QV6ag8a5Xz6kxq2w+7y0D3t0xw2K5f3Z6sWUVmD2zjM=" crossorigin=""></script>
     <style>
         :root { 
             --primary: #2c3e50; 
@@ -367,56 +365,11 @@
             updateCharts(annualData, analysisResults);
 
             document.getElementById('btnExport').disabled = false;
-            // Show map centered on the requested coordinates (analysis origin)
-            // Re-use the submitted lat/lon values (already declared earlier in the handler)
-            if (window.hydroMap && window.hydroMap.openAndCenterMap && isValidLatLon(lat, lon)) {
-                window.hydroMap.openAndCenterMap(lat, lon);
-            }
         } catch (err) {
             console.error(err);
             showError('Error: ' + err.message);
         } finally {
             document.getElementById('loader').style.display = 'none';
-        }
-    });
-
-    // Initialize and integrate external hydroMap module (Leaflet)
-    // `hydroMap` is defined in static/js/map.js and exposes methods like openAndCenterMap, updateMapMarker, etc.
-    const btnLocate = document.getElementById('btnLocate');
-    const latInput = document.getElementById('lat');
-    const lonInput = document.getElementById('lon');
-
-    function isValidLatLon(lat, lon) {
-        return Number.isFinite(lat) && Number.isFinite(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
-    }
-
-    btnLocate.addEventListener('click', function() {
-        const lat = parseFloat(latInput.value);
-        const lon = parseFloat(lonInput.value);
-        if (!isValidLatLon(lat, lon)) {
-            showError('Please enter valid latitude and longitude values.');
-            return;
-        }
-        if (window.hydroMap && window.hydroMap.openAndCenterMap) {
-            window.hydroMap.openAndCenterMap(lat, lon);
-        }
-    });
-
-    // when user changes lat/lon manually, update marker and center map if available
-    latInput.addEventListener('change', function() {
-        const lat = parseFloat(this.value);
-        const lon = parseFloat(lonInput.value);
-        if (!isValidLatLon(lat, lon)) return;
-        if (window.hydroMap && window.hydroMap.updateMapMarker) {
-            window.hydroMap.updateMapMarker(lat, lon);
-        }
-    });
-    lonInput.addEventListener('change', function() {
-        const lat = parseFloat(latInput.value);
-        const lon = parseFloat(this.value);
-        if (!isValidLatLon(lat, lon)) return;
-        if (window.hydroMap && window.hydroMap.updateMapMarker) {
-            window.hydroMap.updateMapMarker(lat, lon);
         }
     });
 

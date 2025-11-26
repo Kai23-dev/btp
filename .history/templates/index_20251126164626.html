@@ -367,11 +367,6 @@
             updateCharts(annualData, analysisResults);
 
             document.getElementById('btnExport').disabled = false;
-            // Show map centered on the requested coordinates (analysis origin)
-            // Re-use the submitted lat/lon values (already declared earlier in the handler)
-            if (window.hydroMap && window.hydroMap.openAndCenterMap && isValidLatLon(lat, lon)) {
-                window.hydroMap.openAndCenterMap(lat, lon);
-            }
         } catch (err) {
             console.error(err);
             showError('Error: ' + err.message);
@@ -380,14 +375,50 @@
         }
     });
 
-    // Initialize and integrate external hydroMap module (Leaflet)
-    // `hydroMap` is defined in static/js/map.js and exposes methods like openAndCenterMap, updateMapMarker, etc.
+    // ==== Map integration (Leaflet) ==== 
+    let map = null;
+    let marker = null;
+    const mapWrapper = document.getElementById('mapWrapper');
     const btnLocate = document.getElementById('btnLocate');
     const latInput = document.getElementById('lat');
     const lonInput = document.getElementById('lon');
 
     function isValidLatLon(lat, lon) {
         return Number.isFinite(lat) && Number.isFinite(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
+    }
+
+    function initMap(lat, lon) {
+        if (map) return;
+        map = L.map('map').setView([lat, lon], 8);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap'
+        }).addTo(map);
+        marker = L.marker([lat, lon], { draggable: true }).addTo(map);
+        marker.on('dragend', function(ev) {
+            const p = ev.target.getLatLng();
+            latInput.value = p.lat.toFixed(6);
+            lonInput.value = p.lng.toFixed(6);
+        });
+    }
+
+    function openAndCenterMap(lat, lon) {
+        if (!isValidLatLon(lat, lon)) {
+            showError('Invalid latitude/longitude values.');
+            return;
+        }
+        showError('');
+        mapWrapper.style.display = 'block';
+        // create map if not created
+        if (!map) {
+            initMap(lat, lon);
+            // Leaflet needs invalidateSize if container was hidden initially
+            setTimeout(() => { map.invalidateSize(); }, 200);
+        } else {
+            map.setView([lat, lon], 8);
+            marker.setLatLng([lat, lon]);
+            map.invalidateSize();
+        }
     }
 
     btnLocate.addEventListener('click', function() {
@@ -397,26 +428,26 @@
             showError('Please enter valid latitude and longitude values.');
             return;
         }
-        if (window.hydroMap && window.hydroMap.openAndCenterMap) {
-            window.hydroMap.openAndCenterMap(lat, lon);
-        }
+        openAndCenterMap(lat, lon);
     });
 
-    // when user changes lat/lon manually, update marker and center map if available
+    // when user changes lat/lon manually, update marker and center map if visible
     latInput.addEventListener('change', function() {
         const lat = parseFloat(this.value);
         const lon = parseFloat(lonInput.value);
         if (!isValidLatLon(lat, lon)) return;
-        if (window.hydroMap && window.hydroMap.updateMapMarker) {
-            window.hydroMap.updateMapMarker(lat, lon);
+        if (map && marker) {
+            marker.setLatLng([lat, lon]);
+            map.setView([lat, lon], Math.max(map.getZoom(), 6));
         }
     });
     lonInput.addEventListener('change', function() {
         const lat = parseFloat(latInput.value);
         const lon = parseFloat(this.value);
         if (!isValidLatLon(lat, lon)) return;
-        if (window.hydroMap && window.hydroMap.updateMapMarker) {
-            window.hydroMap.updateMapMarker(lat, lon);
+        if (map && marker) {
+            marker.setLatLng([lat, lon]);
+            map.setView([lat, lon], Math.max(map.getZoom(), 6));
         }
     });
 

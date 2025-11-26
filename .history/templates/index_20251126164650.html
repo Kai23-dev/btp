@@ -368,7 +368,8 @@
 
             document.getElementById('btnExport').disabled = false;
             // Show map centered on the requested coordinates (analysis origin)
-            // Re-use the submitted lat/lon values (already declared earlier in the handler)
+            const lat = parseFloat(document.getElementById('lat').value);
+            const lon = parseFloat(document.getElementById('lon').value);
             if (window.hydroMap && window.hydroMap.openAndCenterMap && isValidLatLon(lat, lon)) {
                 window.hydroMap.openAndCenterMap(lat, lon);
             }

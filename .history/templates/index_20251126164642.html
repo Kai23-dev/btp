@@ -367,11 +367,6 @@
             updateCharts(annualData, analysisResults);
 
             document.getElementById('btnExport').disabled = false;
-            // Show map centered on the requested coordinates (analysis origin)
-            // Re-use the submitted lat/lon values (already declared earlier in the handler)
-            if (window.hydroMap && window.hydroMap.openAndCenterMap && isValidLatLon(lat, lon)) {
-                window.hydroMap.openAndCenterMap(lat, lon);
-            }
         } catch (err) {
             console.error(err);
             showError('Error: ' + err.message);
