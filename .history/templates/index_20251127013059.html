@@ -6,6 +6,11 @@
     <title>Hydrological Analysis Tool (Open-Meteo)</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+    <!-- Leaflet for interactive map (no API key required) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <!-- Project-specific map module -->
+    <script src="{{ url_for('static', filename='js/map.js') }}" defer></script>
     <style>
         :root { 
             --primary: #2c3e50; 
@@ -243,6 +248,10 @@
             <label for="climateFactor" title="Adjusts PMP based on climate change projections">🌡️ Climate Adjustment (%)</label>
             <input type="number" id="climateFactor" value="7" min="0" max="50" step="0.1">
         </div>
+        <div class="control-group">
+            <label for="btnLocate">📍 Location</label>
+            <button type="button" id="btnLocate" class="btn-calc">📍 Locate on Map</button>
+        </div>
         
         <div class="btn-group">
             <button type="submit" class="btn-calc">
@@ -254,11 +263,16 @@
         </div>
         
         <div id="loader" class="loader">
-            <div>🔄 Fetching historical data from Open-Meteo API...</div>
-            <div style="font-size: 0.8em; margin-top: 5px;">This may take 10-20 seconds for long date ranges</div>
+            <div>🔄 Requesting analysis from server...</div>
+            <div style="font-size: 0.8em; margin-top: 5px;">This may take 10-30 seconds for long date ranges</div>
         </div>
         <div id="errorMsg" class="error"></div>
     </form>
+
+    <!-- Map container (hidden until user requests it) -->
+    <div id="mapWrapper" style="display:none; margin-top: 10px;">
+        <div id="map" style="height: 380px; border-radius: 8px;"></div>
+    </div>
 
     <div class="stats-grid" id="statsOutput">
         <!-- Dynamic content will be inserted here -->
@@ -305,255 +319,114 @@
 
     // Initialize when page loads
     document.addEventListener('DOMContentLoaded', function() {
-        // Set current year as default end year
         const currentYear = new Date().getFullYear();
         document.getElementById('endYear').value = currentYear;
         document.getElementById('startYear').value = currentYear - 5;
     });
 
-    // --- MAIN FORM HANDLER ---
+    // Form handler: now calls backend API
     document.getElementById('hydroForm').addEventListener('submit', async (e) => {
         e.preventDefault();
-        
         const lat = parseFloat(document.getElementById('lat').value);
         const lon = parseFloat(document.getElementById('lon').value);
         const startYear = parseInt(document.getElementById('startYear').value);
         const endYear = parseInt(document.getElementById('endYear').value);
         const climateFactor = parseFloat(document.getElementById('climateFactor').value) / 100;
 
-        // Validation
-        if (startYear >= endYear) {
-            showError("Start year must be before end year");
-            return;
-        }
+        if (startYear >= endYear) { showError("Start year must be before end year"); return; }
 
         if (endYear - startYear > 30) {
-            if (!confirm(`You've selected ${endYear - startYear + 1} years. This may take a while. Continue?`)) {
-                return;
-            }
+            if (!confirm(`You've selected ${endYear - startYear + 1} years. This may take a while. Continue?`)) return;
         }
 
-        const loader = document.getElementById('loader');
-        const errorMsg = document.getElementById('errorMsg');
-        
-        loader.style.display = 'block';
-        errorMsg.style.display = 'none';
+        document.getElementById('loader').style.display = 'block';
+        showError('');
         document.getElementById('btnExport').disabled = true;
 
         try {
-            // 1. Fetch data from Open-Meteo API
-            const annualData = await fetchHistoricalData(lat, lon, startYear, endYear);
-            
-            if (annualData.length === 0) {
-                throw new Error("No valid data received for the selected location and time period");
+            const resp = await fetch('/api/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ lat, lon, startYear, endYear, climateFactor })
+            });
+
+            if (!resp.ok) {
+                const err = await resp.json().catch(() => ({}));
+                throw new Error(err.error || 'Server analysis failed');
             }
 
-            globalProcessedData = annualData;
-            currentAnalysis = annualData;
+            const json = await resp.json();
+            const annualData = json.annualData;
+            const analysisResults = json.analysisResults;
 
-            // 2. Calculate hydrological parameters
-            const analysisResults = calculateHydrologicalParameters(annualData, climateFactor);
-            
-            // 3. Update UI
+            globalProcessedData = annualData;
+            currentAnalysis = analysisResults;
+
             updateStatisticsDisplay(analysisResults);
             updateDataTable(annualData);
             updateCharts(annualData, analysisResults);
-            
-            document.getElementById('btnExport').disabled = false;
-            showError(""); // Clear any previous errors
 
+            document.getElementById('btnExport').disabled = false;
+            // Show map centered on the requested coordinates (analysis origin)
+            // Re-use the submitted lat/lon values (already declared earlier in the handler)
+            if (window.hydroMap && window.hydroMap.openAndCenterMap && isValidLatLon(lat, lon)) {
+                window.hydroMap.openAndCenterMap(lat, lon);
+            }
         } catch (err) {
-            console.error('Analysis error:', err);
-            showError("Error: " + err.message);
+            console.error(err);
+            showError('Error: ' + err.message);
         } finally {
-            loader.style.display = 'none';
+            document.getElementById('loader').style.display = 'none';
         }
     });
 
-    // --- DATA FETCHING FUNCTIONS ---
-    
-    async function fetchHistoricalData(lat, lon, startYear, endYear) {
-        const annualData = [];
-        
-        // Fetch data year by year to avoid API limits and improve reliability
-        for (let year = startYear; year <= endYear; year++) {
-            try {
-                const startDate = `${year}-01-01`;
-                const endDate = `${year}-12-31`;
-                
-                const url = `https://archive-api.open-meteo.com/v1/archive?` +
-                    `latitude=${lat}&longitude=${lon}&` +
-                    `start_date=${startDate}&end_date=${endDate}&` +
-                    `daily=temperature_2m_max,temperature_2m_min,temperature_2m_mean,precipitation_sum,windspeed_10m_max&` +
-                    `timezone=auto`;
-                
-                const response = await fetch(url);
-                
-                if (!response.ok) {
-                    console.warn(`No data for year ${year}`);
-                    continue;
-                }
-                
-                const data = await response.json();
-                
-                if (!data.daily || !data.daily.time || data.daily.time.length === 0) {
-                    continue;
-                }
+    // Initialize and integrate external hydroMap module (Leaflet)
+    // `hydroMap` is defined in static/js/map.js and exposes methods like openAndCenterMap, updateMapMarker, etc.
+    const btnLocate = document.getElementById('btnLocate');
+    const latInput = document.getElementById('lat');
+    const lonInput = document.getElementById('lon');
 
-                // Process daily data for this year
-                const yearData = processYearlyData(data.daily, year);
-                if (yearData) {
-                    annualData.push(yearData);
-                }
-                
-                // Small delay to be respectful to the API
-                await new Promise(resolve => setTimeout(resolve, 100));
-                
-            } catch (error) {
-                console.warn(`Failed to fetch data for year ${year}:`, error);
-            }
+    function isValidLatLon(lat, lon) {
+        return Number.isFinite(lat) && Number.isFinite(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180;
+    }
+
+    btnLocate.addEventListener('click', function() {
+        const lat = parseFloat(latInput.value);
+        const lon = parseFloat(lonInput.value);
+        if (!isValidLatLon(lat, lon)) {
+            showError('Please enter valid latitude and longitude values.');
+            return;
         }
-        
-        return annualData.sort((a, b) => a.year - b.year);
-    }
-
-    function processYearlyData(dailyData, year) {
-        const { time, precipitation_sum, temperature_2m_max, temperature_2m_min, temperature_2m_mean, windspeed_10m_max } = dailyData;
-        
-        // Filter out null values and calculate statistics
-        const validPrecip = precipitation_sum.filter(val => val !== null && val >= 0);
-        const validTempMax = temperature_2m_max.filter(val => val !== null);
-        const validTempMin = temperature_2m_min.filter(val => val !== null);
-        const validTempMean = temperature_2m_mean.filter(val => val !== null);
-        const validWind = windspeed_10m_max.filter(val => val !== null);
-
-        if (validPrecip.length === 0) return null;
-
-        const amdp = Math.max(...validPrecip);
-        const totalPrecip = validPrecip.reduce((sum, val) => sum + val, 0);
-        const avgTemp = validTempMean.length > 0 ? validTempMean.reduce((sum, val) => sum + val, 0) / validTempMean.length : null;
-        const maxTemp = validTempMax.length > 0 ? Math.max(...validTempMax) : null;
-        const minTemp = validTempMin.length > 0 ? Math.min(...validTempMin) : null;
-        const avgWind = validWind.length > 0 ? validWind.reduce((sum, val) => sum + val, 0) / validWind.length : null;
-
-        return {
-            year: parseInt(year),
-            amdp,
-            totalPrecip,
-            avgTemp,
-            maxTemp,
-            minTemp,
-            avgWind,
-            dataPoints: validPrecip.length
-        };
-    }
-
-    // ---
-    
-    function calculateHydrologicalParameters(annualData, climateFactor) {
-        const amdpValues = annualData.map(d => d.amdp);
-        const totalPrecipValues = annualData.map(d => d.totalPrecip);
-        
-        const meanAMDP = calculateMean(amdpValues);
-        const stdAMDP = calculateStandardDeviation(amdpValues);
-        const meanAnnualPrecip = calculateMean(totalPrecipValues);
-        
-        const evaResults = calculatePMPWithEVA(amdpValues);
-        
-        const adjustedPMP = climateFactor > 0 ? 
-            evaResults.pmp * (1 + climateFactor) : 
-            evaResults.pmp;
-        
-        const trend = calculateTrend(amdpValues);
-        const variability = (stdAMDP / meanAMDP) * 100; 
-        
-        return {
-            meanAMDP,
-            stdAMDP,
-            meanAnnualPrecip,
-            pmp: adjustedPMP,
-            pmpUnadjusted: evaResults.pmp,
-            frequencyFactor: evaResults.frequencyFactor,
-            climateAdjustment: climateFactor,
-            trend: trend,
-            variability: variability,
-            dataPoints: annualData.length,
-            yearsCovered: annualData.length,
-            confidenceInterval: evaResults.confidenceInterval
-        };
-    }
-
-    function calculatePMPWithEVA(amdpValues) {
-        const mean = calculateMean(amdpValues);
-        const std = calculateStandardDeviation(amdpValues);
-        
-        const Xmax = Math.max(...amdpValues);
-        const Xmean = calculateMean(amdpValues.filter(x => x !== Xmax));
-        const S = calculateStandardDeviation(amdpValues.filter(x => x !== Xmax));
-        
-        let frequencyFactor;
-        if (S > 0) {
-            frequencyFactor = (Xmax - Xmean) / S;
-            frequencyFactor = Math.min(Math.max(frequencyFactor, 5), 15);
-        } else {
-            frequencyFactor = 10; 
+        if (window.hydroMap && window.hydroMap.openAndCenterMap) {
+            window.hydroMap.openAndCenterMap(lat, lon);
         }
-        
-        const pmp = mean + frequencyFactor * std;
-        const n = amdpValues.length;
-        const standardError = std / Math.sqrt(n);
-        const confidenceInterval = {
-            lower: pmp - 1.96 * standardError,
-            upper: pmp + 1.96 * standardError
-        };
-        
-        return {
-            pmp,
-            frequencyFactor,
-            confidenceInterval
-        };
-    }
+    });
 
-
-    
-    function calculateMean(values) {
-        if (values.length === 0) return 0;
-        return values.reduce((sum, value) => sum + value, 0) / values.length;
-    }
-
-    function calculateStandardDeviation(values) {
-        if (values.length < 2) return 0;
-        const mean = calculateMean(values);
-        const squaredDiffs = values.map(value => Math.pow(value - mean, 2));
-        const variance = squaredDiffs.reduce((sum, value) => sum + value, 0) / (values.length - 1);
-        return Math.sqrt(variance);
-    }
-
-    function calculateTrend(values) {
-        if (values.length < 2) return 0;
-        const n = values.length;
-        const x = Array.from({length: n}, (_, i) => i);
-        const xMean = calculateMean(x);
-        const yMean = calculateMean(values);
-        
-        let numerator = 0;
-        let denominator = 0;
-        
-        for (let i = 0; i < n; i++) {
-            numerator += (x[i] - xMean) * (values[i] - yMean);
-            denominator += Math.pow(x[i] - xMean, 2);
+    // when user changes lat/lon manually, update marker and center map if available
+    latInput.addEventListener('change', function() {
+        const lat = parseFloat(this.value);
+        const lon = parseFloat(lonInput.value);
+        if (!isValidLatLon(lat, lon)) return;
+        if (window.hydroMap && window.hydroMap.updateMapMarker) {
+            window.hydroMap.updateMapMarker(lat, lon);
         }
-        
-        return denominator !== 0 ? numerator / denominator : 0;
-    }
-    
-    
+    });
+    lonInput.addEventListener('change', function() {
+        const lat = parseFloat(latInput.value);
+        const lon = parseFloat(this.value);
+        if (!isValidLatLon(lat, lon)) return;
+        if (window.hydroMap && window.hydroMap.updateMapMarker) {
+            window.hydroMap.updateMapMarker(lat, lon);
+        }
+    });
+
+    // UI update functions (mostly same as before)
     function updateStatisticsDisplay(results) {
         const container = document.getElementById('statsOutput');
-        const climateText = results.climateAdjustment > 0 ? 
-            `<div class="sub">Includes +${(results.climateAdjustment * 100).toFixed(1)}% climate adjustment</div>` : 
+        const climateText = results.climateAdjustment > 0 ?
+            `<div class="sub">Includes +${(results.climateAdjustment * 100).toFixed(1)}% climate adjustment</div>` :
             `<div class="sub">No climate adjustment applied</div>`;
-        
+
         container.innerHTML = `
             <div class="stat-card danger">
                 <h3>🚨 Probable Maximum Precipitation (PMP)</h3>
@@ -600,7 +473,6 @@
         const totalPrecip = data.map(d => d.totalPrecip);
         const temperatures = data.map(d => d.avgTemp).filter(t => t !== null);
         
-        // Chart 1: AMDP Time Series with PMP
         renderChart('amdpChart', {
             type: 'line',
             data: {
@@ -636,134 +508,50 @@
             },
             options: {
                 responsive: true,
-                plugins: {
-                    title: { display: true, text: 'Extreme Precipitation Analysis (AMDP vs PMP)' },
-                    tooltip: { mode: 'index', intersect: false }
-                },
-                scales: {
-                    y: { 
-                        beginAtZero: true,
-                        title: { display: true, text: 'Precipitation (mm)' }
-                    },
-                    x: {
-                        title: { display: true, text: 'Year' }
-                    }
-                }
+                plugins: { title: { display: true, text: 'Extreme Precipitation Analysis (AMDP vs PMP)' }, tooltip: { mode: 'index', intersect: false } },
+                scales: { y: { beginAtZero: true, title: { display: true, text: 'Precipitation (mm)' } }, x: { title: { display: true, text: 'Year' } } }
             }
         });
 
-        // Chart 2: Total Annual Precipitation
         renderChart('precipitationChart', {
             type: 'bar',
-            data: {
-                labels: years,
-                datasets: [{
-                    label: 'Total Annual Precipitation',
-                    data: totalPrecip,
-                    backgroundColor: '#3498db',
-                    borderColor: '#2980b9',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    title: { display: true, text: 'Total Annual Precipitation' }
-                },
-                scales: {
-                    y: { 
-                        beginAtZero: true,
-                        title: { display: true, text: 'Precipitation (mm)' }
-                    }
-                }
-            }
+            data: { labels: years, datasets: [{ label: 'Total Annual Precipitation', data: totalPrecip, backgroundColor: '#3498db', borderColor: '#2980b9', borderWidth: 1 }] },
+            options: { responsive: true, plugins: { title: { display: true, text: 'Total Annual Precipitation' } }, scales: { y: { beginAtZero: true, title: { display: true, text: 'Precipitation (mm)' } } } }
         });
 
-        // Chart 3: Climate Variables
         if (temperatures.length > 0) {
             renderChart('climateChart', {
                 type: 'line',
                 data: {
                     labels: years.slice(-temperatures.length),
                     datasets: [
-                        {
-                            label: 'Average Temperature',
-                            data: temperatures,
-                            borderColor: '#e67e22',
-                            backgroundColor: 'rgba(230, 126, 34, 0.1)',
-                            yAxisID: 'y',
-                            fill: true
-                        },
-                        {
-                            label: 'AMDP',
-                            data: amdps.slice(-temperatures.length),
-                            borderColor: '#e74c3c',
-                            backgroundColor: 'rgba(231, 76, 60, 0.1)',
-                            yAxisID: 'y1',
-                            fill: true
-                        }
+                        { label: 'Average Temperature', data: temperatures, borderColor: '#e67e22', backgroundColor: 'rgba(230, 126, 34, 0.1)', yAxisID: 'y', fill: true },
+                        { label: 'AMDP', data: amdps.slice(-temperatures.length), borderColor: '#e74c3c', backgroundColor: 'rgba(231, 76, 60, 0.1)', yAxisID: 'y1', fill: true }
                     ]
                 },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        title: { display: true, text: 'Temperature vs Extreme Precipitation' }
-                    },
-                    scales: {
-                        y: {
-                            type: 'linear',
-                            display: true,
-                            position: 'left',
-                            title: { display: true, text: 'Temperature (°C)' }
-                        },
-                        y1: {
-                            type: 'linear',
-                            display: true,
-                            position: 'right',
-                            title: { display: true, text: 'Precipitation (mm)' },
-                            grid: { drawOnChartArea: false }
-                        }
-                    }
-                }
+                options: { responsive: true, plugins: { title: { display: true, text: 'Temperature vs Extreme Precipitation' } }, scales: { y: { type: 'linear', display: true, position: 'left', title: { display: true, text: 'Temperature (°C)' } }, y1: { type: 'linear', display: true, position: 'right', title: { display: true, text: 'Precipitation (mm)' }, grid: { drawOnChartArea: false } } } }
             });
         }
     }
 
     function renderChart(canvasId, config) {
-        if (charts[canvasId]) {
-            charts[canvasId].destroy();
-        }
+        if (charts[canvasId]) charts[canvasId].destroy();
         const ctx = document.getElementById(canvasId).getContext('2d');
         charts[canvasId] = new Chart(ctx, config);
     }
 
-    // --- CSV EXPORT ---
-    
+    // CSV export (client-side using the backend-processed data)
     document.getElementById('btnExport').addEventListener('click', function() {
         if (!globalProcessedData.length) return;
-        
         const headers = ['Year', 'AMDP (mm)', 'Total Precipitation (mm)', 'Avg Temp (°C)', 'Max Temp (°C)', 'Min Temp (°C)', 'Avg Wind Speed (km/h)', 'Data Points'];
-        
         let csvContent = headers.join(',') + '\n';
-        
         globalProcessedData.forEach(row => {
-            const csvRow = [
-                row.year,
-                row.amdp.toFixed(2),
-                row.totalPrecip.toFixed(2),
-                row.avgTemp !== null ? row.avgTemp.toFixed(2) : 'N/A',
-                row.maxTemp !== null ? row.maxTemp.toFixed(2) : 'N/A',
-                row.minTemp !== null ? row.minTemp.toFixed(2) : 'N/A',
-                row.avgWind !== null ? row.avgWind.toFixed(2) : 'N/A',
-                row.dataPoints
-            ];
+            const csvRow = [row.year, row.amdp.toFixed(2), row.totalPrecip.toFixed(2), row.avgTemp !== null ? row.avgTemp.toFixed(2) : 'N/A', row.maxTemp !== null ? row.maxTemp.toFixed(2) : 'N/A', row.minTemp !== null ? row.minTemp.toFixed(2) : 'N/A', row.avgWind !== null ? row.avgWind.toFixed(2) : 'N/A', row.dataPoints];
             csvContent += csvRow.join(',') + '\n';
         });
 
         if (currentAnalysis) {
-            const results = calculateHydrologicalParameters(globalProcessedData, 
-                parseFloat(document.getElementById('climateFactor').value) / 100);
-            
+            const results = currentAnalysis;
             csvContent += '\nSummary Statistics\n';
             csvContent += `Parameter,Value,Units\n`;
             csvContent += `PMP,${results.pmp.toFixed(2)},mm\n`;
@@ -778,7 +566,6 @@
         saveAs(blob, `hydrological_analysis_${Date.now()}.csv`);
     });
 
-    
     function showError(message) {
         const errorElement = document.getElementById('errorMsg');
         if (message) {
@@ -789,21 +576,16 @@
         }
     }
 
-    // Input validation
     document.getElementById('startYear').addEventListener('change', function() {
         const startYear = parseInt(this.value);
         const endYear = parseInt(document.getElementById('endYear').value);
-        if (startYear >= endYear) {
-            this.value = endYear - 1;
-        }
+        if (startYear >= endYear) this.value = endYear - 1;
     });
 
     document.getElementById('endYear').addEventListener('change', function() {
         const startYear = parseInt(document.getElementById('startYear').value);
         const endYear = parseInt(this.value);
-        if (endYear <= startYear) {
-            this.value = startYear + 1;
-        }
+        if (endYear <= startYear) this.value = startYear + 1;
     });
 
 </script>

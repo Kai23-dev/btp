@@ -448,24 +448,28 @@
         };
     }
 
-    // ---
+    // --- HYDROLOGICAL CALCULATIONS ---
     
     function calculateHydrologicalParameters(annualData, climateFactor) {
         const amdpValues = annualData.map(d => d.amdp);
         const totalPrecipValues = annualData.map(d => d.totalPrecip);
         
+        // Basic statistics
         const meanAMDP = calculateMean(amdpValues);
         const stdAMDP = calculateStandardDeviation(amdpValues);
         const meanAnnualPrecip = calculateMean(totalPrecipValues);
         
+        // Enhanced PMP calculation using Extreme Value Analysis (EVA)
         const evaResults = calculatePMPWithEVA(amdpValues);
         
+        // Apply climate change adjustment
         const adjustedPMP = climateFactor > 0 ? 
             evaResults.pmp * (1 + climateFactor) : 
             evaResults.pmp;
         
+        // Calculate additional statistics
         const trend = calculateTrend(amdpValues);
-        const variability = (stdAMDP / meanAMDP) * 100; 
+        const variability = (stdAMDP / meanAMDP) * 100; // Coefficient of variation
         
         return {
             meanAMDP,
@@ -487,6 +491,8 @@
         const mean = calculateMean(amdpValues);
         const std = calculateStandardDeviation(amdpValues);
         
+        // Use Hershfield method with calculated frequency factor
+        // Km = (Xmax - Xmean) / S, where Xmax is the maximum observed value
         const Xmax = Math.max(...amdpValues);
         const Xmean = calculateMean(amdpValues.filter(x => x !== Xmax));
         const S = calculateStandardDeviation(amdpValues.filter(x => x !== Xmax));
@@ -494,12 +500,15 @@
         let frequencyFactor;
         if (S > 0) {
             frequencyFactor = (Xmax - Xmean) / S;
+            // Limit frequency factor to reasonable values (typically 5-15)
             frequencyFactor = Math.min(Math.max(frequencyFactor, 5), 15);
         } else {
-            frequencyFactor = 10; 
+            frequencyFactor = 10; // Default reasonable value
         }
         
         const pmp = mean + frequencyFactor * std;
+        
+        // Calculate approximate confidence interval (simplified)
         const n = amdpValues.length;
         const standardError = std / Math.sqrt(n);
         const confidenceInterval = {
@@ -514,7 +523,7 @@
         };
     }
 
-
+    // --- MATHEMATICAL UTILITIES ---
     
     function calculateMean(values) {
         if (values.length === 0) return 0;
@@ -546,7 +555,8 @@
         
         return denominator !== 0 ? numerator / denominator : 0;
     }
-    
+
+    // --- UI UPDATE FUNCTIONS ---
     
     function updateStatisticsDisplay(results) {
         const container = document.getElementById('statsOutput');
@@ -760,6 +770,7 @@
             csvContent += csvRow.join(',') + '\n';
         });
 
+        // Add summary section
         if (currentAnalysis) {
             const results = calculateHydrologicalParameters(globalProcessedData, 
                 parseFloat(document.getElementById('climateFactor').value) / 100);
@@ -778,6 +789,7 @@
         saveAs(blob, `hydrological_analysis_${Date.now()}.csv`);
     });
 
+    // --- UTILITY FUNCTIONS ---
     
     function showError(message) {
         const errorElement = document.getElementById('errorMsg');
