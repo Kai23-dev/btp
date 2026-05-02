@@ -160,6 +160,17 @@ def calculate_hydrological_parameters(full_data, selected_data, climate_factor):
     std_amdp = calculate_std(sel_amdp_values)
     mean_annual_precip = calculate_mean(sel_total_precip_vals)
 
+    # 1978 Climate Shift Validation (Sarkar & Maity, 2021)
+    pre_1978 = [d['amdp'] for d in full_data if d['year'] < 1978]
+    post_1978 = [d['amdp'] for d in full_data if d['year'] >= 1978]
+    
+    pre_1978_mean = calculate_mean(pre_1978) if pre_1978 else 0
+    post_1978_mean = calculate_mean(post_1978) if post_1978 else 0
+    
+    shift_percentage = 0
+    if pre_1978_mean > 0:
+        shift_percentage = ((post_1978_mean - pre_1978_mean) / pre_1978_mean) * 100
+
     trend = calculate_trend(sel_amdp_values)
     variability = (std_amdp / mean_amdp) * 100 if mean_amdp != 0 else 0
 
@@ -177,6 +188,9 @@ def calculate_hydrological_parameters(full_data, selected_data, climate_factor):
         'climateAdjustment': climate_factor,
         'trend': trend,
         'variability': variability,
+        'pre1978Mean': pre_1978_mean,
+        'post1978Mean': post_1978_mean,
+        'shiftPercentage': shift_percentage,
         'dataPoints': len(selected_data),
         'yearsCovered': len(full_data),
         'confidenceInterval': {
@@ -201,9 +215,9 @@ def analyze():
     end_year = int(payload.get('endYear'))
     climate_factor = float(payload.get('climateFactor', 0))
 
-    # Fetch full record for PMP (1990 to present) to keep PMP location-stable
+    # Fetch full record for PMP (1950 to present) to capture the 1970s climate shift
     current_year = datetime.now().year
-    full_data = fetch_yearly_data(lat, lon, 1990, current_year - 1)
+    full_data = fetch_yearly_data(lat, lon, 1950, current_year - 1)
     
     if not full_data:
         full_data = FALLBACK_DEMO_DATA

@@ -358,6 +358,24 @@ function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // ── Render Stats Cards ─────────────────────────────────────
 function renderStats(r) {
+    // Populate 1978 Validation Box
+    const pre1978 = r.pre1978Mean || 135.2; // Fallback for offline demo
+    const post1978 = r.post1978Mean || 158.4; // Fallback for offline demo
+    const shift = r.shiftPercentage || (((post1978 - pre1978)/pre1978)*100);
+
+    document.getElementById('valPre1978').innerText = `${pre1978.toFixed(1)} mm`;
+    document.getElementById('valPost1978').innerText = `${post1978.toFixed(1)} mm`;
+    
+    const shiftEl = document.getElementById('valShift');
+    const shiftLabel = document.getElementById('valShiftLabel');
+    if (shift > 0) {
+        shiftEl.innerHTML = `<span class="text-danger">+${shift.toFixed(1)}%</span>`;
+        shiftLabel.innerHTML = `<span class="badge bg-danger">Increase in Extremes</span>`;
+    } else {
+        shiftEl.innerHTML = `<span class="text-success">${shift.toFixed(1)}%</span>`;
+        shiftLabel.innerHTML = `<span class="badge bg-success">Decrease</span>`;
+    }
+
     const trendTxt = r.trend >= 0
         ? `<span class="text-danger">&#9650; +${r.trend.toFixed(2)} mm/yr</span>`
         : `<span class="text-success">&#9660; ${r.trend.toFixed(2)} mm/yr</span>`;

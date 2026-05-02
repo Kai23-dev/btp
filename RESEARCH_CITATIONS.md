@@ -1,7 +1,7 @@
 # Research Data Sources & Citations Documentation
 
 ## Project Overview
-This document details all research papers, methodologies, and data sources integrated into the Hydrological Parameter Calculator project. This project builds upon BTP-1 (Hydrological Analysis Tool) by adding deep learning components for flood prediction and weather image analysis.
+This document details all research papers, methodologies, and data sources integrated into the Hydrological Parameter Calculator project. This project builds upon  deep learning components for flood prediction and weather image analysis.
 
 ---
 
@@ -258,29 +258,10 @@ MODIFIED FILES:
 
 ---
 
-## How to Present to Professor
 
-**Statement for Professor:**
 
-"The flood prediction module uses the LSTM sequence learning methodology from Khan and Maity's 2020 IEEE Access paper on hybrid deep learning rainfall prediction. The climate adjustment incorporates the 1978 climate shift identified in Sarkar and Maity's 2021 Scientific Reports study on global precipitation extremes.
 
-The weather image analysis module builds on the deep learning framework from your 2024 Applied Computing and Geosciences paper (Maity et al.) with CNN feature extraction adapted for field weather assessment.
 
-All methodologies are directly from published research, and the code implements the theoretical foundations while simplifying computation for demonstration purposes."
-
----
-
-## Validation Checklist
-
-- [x] All papers cited with DOI
-- [x] Methodologies traced to source research
-- [x] Implementation details documented
-- [x] Code comments reference papers
-- [x] Parameter choices justified by literature
-- [x] Climate shift data from peer-reviewed source
-- [x] PMP methodology from professor's research
-
----
 
 **Document prepared:** April 30, 2026
 **Project:** Hydrological Parameter Calculator with AI/ML Components
