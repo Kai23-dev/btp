@@ -130,8 +130,8 @@ function calculateValues(backendResults, selectedData, fullData) {
     const selAMDP = selectedData.map(d => d.amdp);
     
     currentResults = {
-        meanPmpAMDP: backendResults.meanAMDP,
-        stdPmpAMDP: backendResults.stdAMDP,
+        meanPmpAMDP: backendResults.meanPmpAMDP,
+        stdPmpAMDP: backendResults.stdPmpAMDP,
         pmpFixed: backendResults.pmpUnadjusted,
         pmpAdj: backendResults.pmp,
         Km: backendResults.frequencyFactor,
@@ -145,9 +145,14 @@ function calculateValues(backendResults, selectedData, fullData) {
         climAdj: backendResults.climateAdjustment / 100,
         trend: backendResults.trend,
         variability: backendResults.variability,
-        selectedYears: backendResults.yearsCovered,
+        selectedYears: backendResults.dataPoints,
         startYear: selectedData[0].year,
-        endYear: selectedData[selectedData.length - 1].year
+        endYear: selectedData[selectedData.length - 1].year,
+        
+        pre1978Mean: backendResults.pre1978Mean,
+        post1978Mean: backendResults.post1978Mean,
+        shiftPercentage: backendResults.shiftPercentage,
+        pValue: backendResults.pValue
     };
 
     renderStats(currentResults);

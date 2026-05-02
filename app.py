@@ -182,6 +182,8 @@ def calculate_hydrological_parameters(full_data, selected_data, climate_factor):
         warning = 'Warning: less than 15 years of data selected for analysis.'
 
     return {
+        'meanPmpAMDP': mean_pmp_amdp,
+        'stdPmpAMDP': std_pmp_amdp,
         'meanAMDP': mean_amdp,
         'stdAMDP': std_amdp,
         'meanAnnualPrecip': mean_annual_precip,
