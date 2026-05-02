@@ -1,8 +1,0 @@
-services:
-  - type: web
-    name: btp-hydrology
-    env: docker
-    branch: main
-    dockerfilePath: Dockerfile
-    plan: free
-    envVars: []

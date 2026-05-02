@@ -576,7 +576,8 @@ async function handleImageFile(file) {
         const preview = document.getElementById('imagePreview');
         const container = document.getElementById('imagePreviewContainer');
         preview.src = ev.target.result;
-        container.style.display = 'block';
+        container.classList.remove('d-none');
+        document.getElementById('uploadZone').classList.add('d-none'); // Hide the upload box to save space
     };
     reader.readAsDataURL(file);
 
