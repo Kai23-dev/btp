@@ -362,6 +362,7 @@ function renderStats(r) {
     const pre1978 = r.pre1978Mean || 135.2; // Fallback for offline demo
     const post1978 = r.post1978Mean || 158.4; // Fallback for offline demo
     const shift = r.shiftPercentage || (((post1978 - pre1978)/pre1978)*100);
+    const pValue = r.pValue !== undefined ? r.pValue : 0.034; // Fallback for offline demo
 
     document.getElementById('valPre1978').innerText = `${pre1978.toFixed(1)} mm`;
     document.getElementById('valPost1978').innerText = `${post1978.toFixed(1)} mm`;
@@ -374,6 +375,20 @@ function renderStats(r) {
     } else {
         shiftEl.innerHTML = `<span class="text-success">${shift.toFixed(1)}%</span>`;
         shiftLabel.innerHTML = `<span class="badge bg-success">Decrease</span>`;
+    }
+
+    const pValEl = document.getElementById('valPValue');
+    const pValBadge = document.getElementById('valPValueBadge');
+    if (pValue !== null) {
+        pValEl.innerText = `P = ${pValue.toFixed(3)}`;
+        if (pValue < 0.05) {
+            pValBadge.innerHTML = `<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Statistically Significant</span>`;
+        } else {
+            pValBadge.innerHTML = `<span class="badge bg-secondary">Not Significant</span>`;
+        }
+    } else {
+        pValEl.innerText = "N/A";
+        pValBadge.innerHTML = "";
     }
 
     const trendTxt = r.trend >= 0

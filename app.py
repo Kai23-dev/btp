@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 import requests
 from math import sqrt
+from scipy.stats import ttest_ind
 from datetime import datetime
 
 app = Flask(__name__)
@@ -168,8 +169,12 @@ def calculate_hydrological_parameters(full_data, selected_data, climate_factor):
     post_1978_mean = calculate_mean(post_1978) if post_1978 else 0
     
     shift_percentage = 0
-    if pre_1978_mean > 0:
+    p_value = None
+    if pre_1978_mean > 0 and len(pre_1978) > 1 and len(post_1978) > 1:
         shift_percentage = ((post_1978_mean - pre_1978_mean) / pre_1978_mean) * 100
+        # Perform Welch's t-test (assuming unequal variances)
+        t_stat, p_val = ttest_ind(pre_1978, post_1978, equal_var=False)
+        p_value = p_val
 
     trend = calculate_trend(sel_amdp_values)
     variability = (std_amdp / mean_amdp) * 100 if mean_amdp != 0 else 0
@@ -191,6 +196,7 @@ def calculate_hydrological_parameters(full_data, selected_data, climate_factor):
         'pre1978Mean': pre_1978_mean,
         'post1978Mean': post_1978_mean,
         'shiftPercentage': shift_percentage,
+        'pValue': p_value,
         'dataPoints': len(selected_data),
         'yearsCovered': len(full_data),
         'confidenceInterval': {

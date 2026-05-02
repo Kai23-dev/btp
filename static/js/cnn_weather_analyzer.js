@@ -228,6 +228,13 @@ const cnnWeatherAnalyzer = {
         s += (1 - full.saturation) * 1.5;       // grey/black storm clouds
         s -= Math.max(0, sky.blueDom) * 4.0;   // absolutely no blue sky
         s -= sky.brightFrac * 2.0;              // no bright patches
+        
+        // CRITICAL FIX: If the image is dark but very SMOOTH (low variance), 
+        // it is likely just nighttime or a shadow, NOT a storm.
+        if (full.variance < 0.15) {
+            s -= 5.0; // massive penalty for smooth dark images
+        }
+
         return Math.max(0, s);
     },
 
