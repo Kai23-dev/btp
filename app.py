@@ -205,6 +205,28 @@ def index():
     return render_template('index.html')
 
 
+def generate_fallback_data():
+    import random
+    fallback = []
+    for y in range(1950, 2024):
+        base_precip = random.uniform(1000, 1500)
+        amdp = random.uniform(80, 150)
+        # Simulate the Sarkar & Maity 1978 climate shift in the fallback data
+        if y >= 1978:
+            amdp *= random.uniform(1.10, 1.25) 
+            
+        fallback.append({
+            'year': y,
+            'amdp': amdp,
+            'totalPrecip': base_precip,
+            'avgTemp': random.uniform(25, 30),
+            'maxTemp': random.uniform(32, 40),
+            'minTemp': random.uniform(15, 22),
+            'avgWind': random.uniform(10, 25),
+            'dataPoints': 365
+        })
+    return fallback
+
 @app.route('/api/analyze', methods=['POST'])
 def analyze():
     payload = request.get_json() or {}
@@ -214,12 +236,16 @@ def analyze():
     end_year = int(payload.get('endYear'))
     climate_factor = float(payload.get('climateFactor', 0))
 
-    # Fetch full record for PMP (1950 to present) to capture the 1970s climate shift
     current_year = datetime.now().year
     full_data = fetch_yearly_data(lat, lon, 1950, current_year - 1)
     
+    is_fallback = False
     if not full_data:
-        return jsonify({'error': 'Failed to fetch live data from Open-Meteo. Please try again or check your internet connection.'}), 500
+        # Instead of throwing a 500 error when Open-Meteo rate-limits us,
+        # we gracefully switch to the synthetic fallback dataset.
+        print("API Failed or Rate Limited. Using Offline Fallback.")
+        full_data = generate_fallback_data()
+        is_fallback = True
 
     # Extract the user's selected period for charts
     selected_data = [d for d in full_data if start_year <= d['year'] <= end_year]
@@ -229,7 +255,12 @@ def analyze():
 
     analysis_results = calculate_hydrological_parameters(full_data, selected_data, climate_factor)
 
-    return jsonify({'annualData': selected_data, 'fullData': full_data, 'analysisResults': analysis_results})
+    return jsonify({
+        'annualData': selected_data, 
+        'fullData': full_data, 
+        'analysisResults': analysis_results,
+        'isFallback': is_fallback
+    })
 
 
 if __name__ == '__main__':

@@ -112,6 +112,19 @@ async function onFormSubmit(e) {
 
         const data = await res.json();
         
+        // If the backend was rate-limited and fell back to offline demo data
+        if (data.isFallback) {
+            const el = document.getElementById('errorMsg');
+            el.innerHTML = "<strong>⚠️ Live API Unreachable (Rate Limit).</strong> Using synthetic offline fallback data for demonstration.";
+            el.classList.remove('d-none', 'alert-danger');
+            el.classList.add('alert-warning');
+        } else {
+            const el = document.getElementById('errorMsg');
+            el.classList.add('d-none');
+            el.classList.remove('alert-warning');
+            el.classList.add('alert-danger'); // Restore default for actual errors
+        }
+        
         selectedData = data.annualData;
         globalData = data.fullData;
         // console.log("data received:", globalData);
