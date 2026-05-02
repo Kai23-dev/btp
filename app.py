@@ -34,36 +34,19 @@ def calculate_trend(values):
     den = sum((x[i] - x_mean) ** 2 for i in range(n))
     return num / den if den != 0 else 0
 
-FALLBACK_DEMO_DATA = [{'year': 1990, 'amdp': 150, 'totalPrecip': 2000, 'avgTemp': 27.0, 'maxTemp': 34.0, 'minTemp': 20.0, 'avgWind': 11.0, 'dataPoints': 365}, {'year': 1991, 'amdp': 150, 'totalPrecip': 2000, 'avgTemp': 27.0, 'maxTemp': 34.0, 'minTemp': 20.0, 'avgWind': 11.0, 'dataPoints': 365}, {'year': 1992, 'amdp': 150, 'totalPrecip': 2000, 'avgTemp': 27.0, 'maxTemp': 34.0, 'minTemp': 20.0, 'avgWind': 11.0, 'dataPoints': 365}, {'year': 1993, 'amdp': 150, 'totalPrecip': 2000, 'avgTemp': 27.0, 'maxTemp': 34.0, 'minTemp': 20.0, 'avgWind': 11.0, 'dataPoints': 365}, {'year': 1994, 'amdp': 150, 'totalPrecip': 2000, 'avgTemp': 27.0, 'maxTemp': 34.0, 'minTemp': 20.0, 'avgWind': 11.0, 'dataPoints': 365}, {'year': 1995, 'amdp': 150, 'totalPrecip': 2000, 'avgTemp': 27.0, 'maxTemp': 34.0, 'minTemp': 20.0, 'avgWind': 11.0, 'dataPoints': 365}, {'year': 1996, 'amdp': 150, 'totalPrecip': 2000, 'avgTemp': 27.0, 'maxTemp': 34.0, 'minTemp': 20.0, 'avgWind': 11.0, 'dataPoints': 365}, {'year': 1997, 'amdp': 150, 'totalPrecip': 2000, 'avgTemp': 27.0, 'maxTemp': 34.0, 'minTemp': 20.0, 'avgWind': 11.0, 'dataPoints': 365}, {'year': 1998, 'amdp': 150, 'totalPrecip': 2000, 'avgTemp': 27.0, 'maxTemp': 34.0, 'minTemp': 20.0, 'avgWind': 11.0, 'dataPoints': 365}, {'year': 1999, 'amdp': 150, 'totalPrecip': 2000, 'avgTemp': 27.0, 'maxTemp': 34.0, 'minTemp': 20.0, 'avgWind': 11.0, 'dataPoints': 365}, {'year': 2000, 'amdp': 150, 'totalPrecip': 2000, 'avgTemp': 27.0, 'maxTemp': 34.0, 'minTemp': 20.0, 'avgWind': 11.0, 'dataPoints': 365}, {'year': 2001, 'amdp': 150, 'totalPrecip': 2000, 'avgTemp': 27.0, 'maxTemp': 34.0, 'minTemp': 20.0, 'avgWind': 11.0, 'dataPoints': 365}, {'year': 2002, 'amdp': 150, 'totalPrecip': 2000, 'avgTemp': 27.0, 'maxTemp': 34.0, 'minTemp': 20.0, 'avgWind': 11.0, 'dataPoints': 365}, {'year': 2003, 'amdp': 150, 'totalPrecip': 2000, 'avgTemp': 27.0, 'maxTemp': 34.0, 'minTemp': 20.0, 'avgWind': 11.0, 'dataPoints': 365}, {'year': 2004, 'amdp': 150, 'totalPrecip': 2000, 'avgTemp': 27.0, 'maxTemp': 34.0, 'minTemp': 20.0, 'avgWind': 11.0, 'dataPoints': 365}, {'year': 2005, 'amdp': 150, 'totalPrecip': 2000, 'avgTemp': 27.0, 'maxTemp': 34.0, 'minTemp': 20.0, 'avgWind': 11.0, 'dataPoints': 365}, {'year': 2006, 'amdp': 150, 'totalPrecip': 2000, 'avgTemp': 27.0, 'maxTemp': 34.0, 'minTemp': 20.0, 'avgWind': 11.0, 'dataPoints': 365}, {'year': 2007, 'amdp': 150, 'totalPrecip': 2000, 'avgTemp': 27.0, 'maxTemp': 34.0, 'minTemp': 20.0, 'avgWind': 11.0, 'dataPoints': 365}, {'year': 2008, 'amdp': 150, 'totalPrecip': 2000, 'avgTemp': 27.0, 'maxTemp': 34.0, 'minTemp': 20.0, 'avgWind': 11.0, 'dataPoints': 365}, {'year': 2009, 'amdp': 150, 'totalPrecip': 2000, 'avgTemp': 27.0, 'maxTemp': 34.0, 'minTemp': 20.0, 'avgWind': 11.0, 'dataPoints': 365}, {'year': 2010, 'amdp': 143, 'totalPrecip': 2150, 'avgTemp': 27.2, 'maxTemp': 34.1, 'minTemp': 19.8, 'avgWind': 11.2, 'dataPoints': 365}, {'year': 2011, 'amdp': 187, 'totalPrecip': 2380, 'avgTemp': 27.0, 'maxTemp': 33.8, 'minTemp': 20.1, 'avgWind': 10.8, 'dataPoints': 365}, {'year': 2012, 'amdp': 112, 'totalPrecip': 1890, 'avgTemp': 27.5, 'maxTemp': 34.3, 'minTemp': 20.3, 'avgWind': 11.5, 'dataPoints': 366}, {'year': 2013, 'amdp': 235, 'totalPrecip': 2640, 'avgTemp': 27.3, 'maxTemp': 34.0, 'minTemp': 19.9, 'avgWind': 10.6, 'dataPoints': 365}, {'year': 2014, 'amdp': 98, 'totalPrecip': 1720, 'avgTemp': 27.8, 'maxTemp': 34.8, 'minTemp': 20.5, 'avgWind': 11.8, 'dataPoints': 365}, {'year': 2015, 'amdp': 176, 'totalPrecip': 2290, 'avgTemp': 27.6, 'maxTemp': 34.5, 'minTemp': 20.2, 'avgWind': 11.0, 'dataPoints': 365}, {'year': 2016, 'amdp': 154, 'totalPrecip': 2100, 'avgTemp': 27.4, 'maxTemp': 34.2, 'minTemp': 20.0, 'avgWind': 11.3, 'dataPoints': 366}, {'year': 2017, 'amdp': 198, 'totalPrecip': 2520, 'avgTemp': 27.1, 'maxTemp': 33.9, 'minTemp': 19.7, 'avgWind': 10.9, 'dataPoints': 365}, {'year': 2018, 'amdp': 221, 'totalPrecip': 2780, 'avgTemp': 27.7, 'maxTemp': 34.6, 'minTemp': 20.4, 'avgWind': 11.6, 'dataPoints': 365}, {'year': 2019, 'amdp': 167, 'totalPrecip': 2380, 'avgTemp': 27.3, 'maxTemp': 34.1, 'minTemp': 20.1, 'avgWind': 11.1, 'dataPoints': 365}, {'year': 2020, 'amdp': 145, 'totalPrecip': 2050, 'avgTemp': 27.5, 'maxTemp': 34.4, 'minTemp': 20.3, 'avgWind': 11.4, 'dataPoints': 366}, {'year': 2021, 'amdp': 203, 'totalPrecip': 2650, 'avgTemp': 27.2, 'maxTemp': 34.0, 'minTemp': 19.8, 'avgWind': 10.7, 'dataPoints': 365}, {'year': 2022, 'amdp': 178, 'totalPrecip': 2300, 'avgTemp': 27.6, 'maxTemp': 34.5, 'minTemp': 20.2, 'avgWind': 11.2, 'dataPoints': 365}, {'year': 2023, 'amdp': 249, 'totalPrecip': 2890, 'avgTemp': 27.8, 'maxTemp': 34.9, 'minTemp': 20.6, 'avgWind': 11.7, 'dataPoints': 365}, {'year': 2024, 'amdp': 180, 'totalPrecip': 2400, 'avgTemp': 27.5, 'maxTemp': 34.5, 'minTemp': 20.5, 'avgWind': 11.0, 'dataPoints': 366}, {'year': 2025, 'amdp': 190, 'totalPrecip': 2450, 'avgTemp': 27.6, 'maxTemp': 34.6, 'minTemp': 20.6, 'avgWind': 11.1, 'dataPoints': 365}]
-
-from datetime import datetime
-from collections import defaultdict
-
-def fetch_yearly_data(lat, lon, start_year, end_year):
-    start_date = f"{start_year}-01-01"
-    end_date = f"{end_year}-12-31"
-    
-    url = (
-        "https://archive-api.open-meteo.com/v1/archive?"
-        f"latitude={lat}&longitude={lon}&"
-        f"start_date={start_date}&end_date={end_date}&"
-        "daily=temperature_2m_max,temperature_2m_min,temperature_2m_mean,precipitation_sum,windspeed_10m_max&"
-        "timezone=auto"
-    )
-    
     try:
         resp = requests.get(url, timeout=30)
         if resp.status_code != 200:
-            return FALLBACK_DEMO_DATA
+            return None
             
         data = resp.json()
         if not data.get('daily'):
-            return FALLBACK_DEMO_DATA
+            return None
             
         return process_multi_year_data(data['daily'])
     except Exception as e:
         print("Error fetching data:", e)
-        return FALLBACK_DEMO_DATA
+        return None
 
 def process_multi_year_data(daily):
     time_arr = daily.get('time', [])
@@ -226,7 +209,7 @@ def analyze():
     full_data = fetch_yearly_data(lat, lon, 1950, current_year - 1)
     
     if not full_data:
-        full_data = FALLBACK_DEMO_DATA
+        return jsonify({'error': 'Failed to fetch live data from Open-Meteo. Please try again or check your internet connection.'}), 500
 
     # Extract the user's selected period for charts
     selected_data = [d for d in full_data if start_year <= d['year'] <= end_year]
