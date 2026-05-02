@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>B.Tech Project - Hydrology Calculator</title>
+    <meta name="description" content="A tool for estimating hydrological parameters and flood prediction using CNN and LSTM models.">
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark navbar-custom">
+    <div class="container px-3">
+        <a class="navbar-brand" href="#">
+            <i class="fas fa-water me-2"></i>Hydrology Estimation & Prediction
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarMenu">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item"><a class="nav-link" href="#analysis">Analysis Module</a></li>
+                <li class="nav-item"><a class="nav-link" href="#cnn-section">CNN Module</a></li>
+                <li class="nav-item"><a class="nav-link" href="#references">Bibliography</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- Page Header -->
+<div class="page-header px-3">
+    <div class="container">
+        <h4 class="page-title">B.Tech Final Year Project: Hydrological Parameter Estimation & Flood Prediction</h4>
+        <p class="text-secondary mb-2">
+            This project calculates AMDP and PMP values from historical meteorological data. It also includes an LSTM model for future flood prediction and a CNN model for weather image classification.
+        </p>
+        <p class="small text-muted mb-0">
+            Developed using Open-Meteo API and research methods from Sarkar & Maity (2020).
+        </p>
+    </div>
+</div>
+
+<div id="analysis" class="container px-3 mb-4">
+    <div class="row">
+        <!-- Input Form -->
+        <div class="col-md-5">
+            <div class="card h-100">
+                <div class="card-header">
+                    Location & Period Details
+                </div>
+                <div class="card-body">
+
+                    <div class="info-box mb-3">
+                        <strong>Note on PMP:</strong> We are using the Extreme Value Analysis (EVA) method based on Sarkar & Maity (2020) for conservative calculation. PMP is dependent on the full dataset of the location.
+                    </div>
+
+                    <form id="hydroForm">
+                        <div class="row g-2 mb-2">
+                            <div class="col-6">
+                                <label class="form-label">Latitude</label>
+                                <input type="number" class="form-control"
+                                       id="lat" value="19.0760" step="0.0001" min="-90" max="90" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">Longitude</label>
+                                <input type="number" class="form-control"
+                                       id="lon" value="72.8777" step="0.0001" min="-180" max="180" required>
+                            </div>
+                        </div>
+                        <div class="row g-2 mb-2">
+                            <div class="col-6">
+                                <label class="form-label">Start Year</label>
+                                <input type="number" class="form-control"
+                                       id="startYear" value="2005" min="1980" max="2023" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">End Year</label>
+                                <input type="number" class="form-control"
+                                       id="endYear" value="2023" min="1981" max="2024" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">
+                                Climate Adjustment Factor (%)
+                            </label>
+                            <input type="number" class="form-control"
+                                   id="climateFactor" value="7" min="0" max="50" step="0.1">
+                        </div>
+
+                        <div class="d-grid gap-2 mt-3">
+                            <button type="submit" class="btn btn-custom" id="analyzeBtn">
+                                Calculate Results
+                            </button>
+                            <div class="row g-2">
+                                <div class="col">
+                                    <button type="button" class="btn btn-outline-secondary w-100" id="locateBtn">
+                                        Use Current Location
+                                    </button>
+                                </div>
+                                <div class="col">
+                                    <button type="button" class="btn btn-success w-100" id="exportBtn" disabled>
+                                        Download CSV
+                                    </button>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-outline-primary" id="demoBtn">
+                                Load Demo (Mumbai)
+                            </button>
+                        </div>
+                    </form>
+
+                    <div id="errorMsg" class="alert alert-danger mt-3 d-none" role="alert"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Map -->
+        <div class="col-md-7">
+            <div class="card h-100">
+                <div class="card-header">
+                    Coordinate Map
+                </div>
+                <div class="card-body p-2">
+                    <div id="map"></div>
+                    <small class="text-muted mt-2 d-block text-center">Click map to auto-fill latitude and longitude.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading screen -->
+    <div id="loadingOverlay" class="card mt-4 d-none text-center p-4">
+        <div class="spinner-border text-primary mx-auto mb-2" role="status"></div>
+        <h5>Fetching data from API...</h5>
+        <p class="text-secondary mb-0">Please wait while the server processes the data.</p>
+    </div>
+
+    <!-- Results Section -->
+    <div id="resultsSection" class="d-none mt-4">
+        <h4>Analysis Output</h4>
+
+        <div class="row mb-4" id="statsGrid"></div>
+
+        <div class="card">
+            <div class="card-body">
+                <ul class="nav nav-tabs mb-3" id="resultTabs" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link active" id="tab-amdp-btn" data-bs-toggle="tab" data-bs-target="#tab-amdp">AMDP Graphs</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="tab-climate-btn" data-bs-toggle="tab" data-bs-target="#tab-climate">Climate Graphs</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="tab-lstm-btn" data-bs-toggle="tab" data-bs-target="#tab-lstm">LSTM Model</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="tab-data-btn" data-bs-toggle="tab" data-bs-target="#tab-data">Data Table</button>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="tab-amdp">
+                        <canvas id="amdpChart" class="mb-3"></canvas>
+                        <canvas id="precipChart"></canvas>
+                    </div>
+
+                    <div class="tab-pane fade" id="tab-climate">
+                        <canvas id="climateChart"></canvas>
+                    </div>
+
+                    <div class="tab-pane fade" id="tab-lstm">
+                        <div class="info-box mb-3">
+                            <strong>LSTM Predictor:</strong> Model uses 5-year moving window for predicting the next 3 years of AMDP.
+                        </div>
+                        <div id="lstmOverallRisk" class="mb-3"></div>
+                        <canvas id="lstmChart" class="mb-4"></canvas>
+                        
+                        <h5>Predicted Values</h5>
+                        <table class="table table-bordered table-striped text-center">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Year</th>
+                                    <th>AMDP (mm)</th>
+                                    <th>Percentile</th>
+                                    <th>Risk Status</th>
+                                    <th>Confidence</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lstmTableBody">
+                                <tr><td colspan="5">No data</td></tr>
+                            </tbody>
+                        </table>
+                        <p class="text-muted small" id="lstmMeta"></p>
+                    </div>
+
+                    <div class="tab-pane fade" id="tab-data">
+                        <table class="table table-bordered table-striped text-center">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Year</th>
+                                    <th>AMDP</th>
+                                    <th>Total Precip</th>
+                                    <th>Avg Temp</th>
+                                    <th>Max Temp</th>
+                                    <th>Min Temp</th>
+                                    <th>Avg Wind</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dataTableBody">
+                                <tr><td colspan="7">No data</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CNN Section -->
+<div id="cnn-section" class="bg-light border-top border-bottom py-4 mt-5">
+    <div class="container px-3">
+        <h4>CNN Image Classification Module</h4>
+        <p class="text-secondary mb-3">
+            Upload an image of the sky or outdoors to classify the weather. The CNN model checks pixel values and color channels to determine the weather condition.
+        </p>
+
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <input type="file" id="imageInput" accept="image/*" class="d-none">
+
+                        <div id="uploadZone">
+                            <i class="fas fa-upload fa-2x mb-2 text-primary"></i>
+                            <p class="mb-0">Click to upload image</p>
+                            <small class="text-muted">JPG or PNG formats only.</small>
+                        </div>
+
+                        <div id="imagePreviewContainer" class="text-center d-none mt-3">
+                            <img id="imagePreview" class="img-fluid border" alt="Preview">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-8">
+                <div id="cnnResults" class="h-100">
+                    <div class="card h-100 d-flex align-items-center justify-content-center p-4 text-muted">
+                        Waiting for image upload...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- References -->
+<div id="references" class="container px-3 my-5">
+    <div class="card">
+        <div class="card-header">
+            Bibliography
+        </div>
+        <div class="card-body">
+            <ul>
+                <li>Sarkar, S. & Maity, R. (2020). Estimation of probable maximum precipitation in the context of climate change. MethodsX, 7, 100882.</li>
+                <li>Khan, M.I. & Maity, R. (2020). Hybrid deep learning approach for multi-step-ahead daily rainfall prediction using GCM simulations. IEEE Access, 8, 52774–52784.</li>
+                <li>Sarkar, S. & Maity, R. (2021). Global climate shift in 1970s causes a significant worldwide increase in precipitation extremes. Scientific Reports, 11, 11574.</li>
+                <li>Maity, R., Srivastava, A., Sarkar, S. & Khan, M.I. (2024). Revolutionizing the future of hydrological science. Applied Computing and Geosciences, 24, 100206.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Footer -->
+<footer class="academic-footer text-center mt-5">
+    <div class="container">
+        <h6 class="fw-bold mb-1" style="color: #1a4b77;">Department of Civil Engineering</h6>
+        <p class="mb-1">Indian Institute of Technology Kharagpur</p>
+        <p class="small text-muted mb-0">B.Tech Final Year Project &copy; 2024-2025</p>
+    </div>
+</footer>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+<script src="{{ url_for('static', filename='js/lstm_flood_predictor.js') }}"></script>
+<script src="{{ url_for('static', filename='js/cnn_weather_analyzer.js') }}"></script>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+</body>
+</html>

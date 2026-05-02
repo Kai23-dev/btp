@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HydroIntel Pro - Location-Based Hydrology Analyser</title>
+    <meta name="description" content="Hydrological parameter estimation tool using AMDP, PMP via Hershfield method, LSTM flood prediction and CNN weather analysis.">
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <!-- Font Awesome (icons) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts - Roboto -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- My stylesheet -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark" style="background-color:#1a3a6b;">
+    <div class="container-fluid px-4">
+        <a class="navbar-brand fw-bold fs-5" href="#">
+            <i class="fas fa-water me-2"></i>HydroIntel Pro
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarMenu">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item"><a class="nav-link" href="#analysis">Analysis</a></li>
+                <li class="nav-item"><a class="nav-link" href="#cnn-section">Weather AI</a></li>
+                <li class="nav-item"><a class="nav-link" href="#references">References</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- Page Header -->
+<div class="bg-white border-bottom py-4 px-4">
+    <div class="container-xl">
+        <h1 class="h3 fw-bold mb-1">Location-Based Hydrology Analyser</h1>
+        <p class="text-muted mb-3">
+            Estimates hydrological parameters — AMDP, PMP, and climate variables — from real
+            meteorological records, with LSTM-based flood forecasting and CNN weather image classification.
+        </p>
+        <div class="d-flex flex-wrap gap-2">
+            <span class="badge text-bg-primary">Sarkar &amp; Maity (2020) — PMP</span>
+            <span class="badge text-bg-primary">Sarkar &amp; Maity (2021) — Climate Shift</span>
+            <span class="badge text-bg-secondary">Khan &amp; Maity (2020) — LSTM</span>
+            <span class="badge text-bg-secondary">Maity et al. (2024) — DL in Hydrology</span>
+            <span class="badge text-bg-light text-dark border">Open-Meteo Historical API</span>
+        </div>
+    </div>
+</div>
+
+<!-- Main Analysis Section -->
+<div id="analysis" class="container-xl px-4 my-4">
+
+    <!-- Input Row: Form + Map -->
+    <div class="row g-4 mb-4">
+
+        <!-- Input Form -->
+        <div class="col-lg-5">
+            <div class="card shadow-sm h-100">
+                <div class="card-header text-white fw-semibold" style="background-color:#1a3a6b;">
+                    <i class="fas fa-map-marker-alt me-2"></i>Location &amp; Period Input
+                </div>
+                <div class="card-body">
+
+                    <div class="alert alert-info py-2 mb-3 small" role="alert">
+                        <i class="fas fa-info-circle me-1"></i>
+                        <strong>PMP Note:</strong> Uses the Hershfield envelope method (Sarkar &amp; Maity, 2020).
+                        The frequency factor Km is read from a fixed lookup table, so PMP is tied to the
+                        location's climatology rather than the exact period selected. Select
+                        <strong>at least 15 years</strong> for reliable statistics.
+                    </div>
+
+                    <form id="hydroForm">
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label fw-medium small">Latitude</label>
+                                <input type="number" class="form-control form-control-sm"
+                                       id="lat" value="19.0760" step="0.0001" min="-90" max="90" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-medium small">Longitude</label>
+                                <input type="number" class="form-control form-control-sm"
+                                       id="lon" value="72.8777" step="0.0001" min="-180" max="180" required>
+                            </div>
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label fw-medium small">Start Year</label>
+                                <input type="number" class="form-control form-control-sm"
+                                       id="startYear" value="2005" min="1980" max="2023" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-medium small">End Year</label>
+                                <input type="number" class="form-control form-control-sm"
+                                       id="endYear" value="2023" min="1981" max="2024" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-medium small">
+                                Climate Adjustment Factor (%)
+                            </label>
+                            <input type="number" class="form-control form-control-sm"
+                                   id="climateFactor" value="7" min="0" max="50" step="0.1">
+                            <div class="form-text">Optional climate change correction on PMP.</div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-sm text-white fw-semibold"
+                                    id="analyzeBtn" style="background-color:#1a3a6b;">
+                                <i class="fas fa-satellite-dish me-1"></i> Fetch Data &amp; Calculate
+                            </button>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-sm btn-outline-secondary flex-fill"
+                                        id="locateBtn">
+                                    <i class="fas fa-crosshairs me-1"></i> Locate
+                                </button>
+                                <button type="button" class="btn btn-sm btn-success flex-fill"
+                                        id="exportBtn" disabled>
+                                    <i class="fas fa-download me-1"></i> Export CSV
+                                </button>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="demoBtn">
+                                <i class="fas fa-flask me-1"></i> Load Demo Data (Mumbai)
+                            </button>
+                        </div>
+                    </form>
+
+                    <div id="errorMsg" class="alert alert-warning mt-3 py-2 small d-none" role="alert"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Map -->
+        <div class="col-lg-7">
+            <div class="card shadow-sm h-100">
+                <div class="card-header text-white fw-semibold" style="background-color:#1a3a6b;">
+                    <i class="fas fa-map me-2"></i>Interactive Map
+                </div>
+                <div class="card-body p-0">
+                    <div id="map"></div>
+                </div>
+                <div class="card-footer text-muted small py-1">
+                    <i class="fas fa-mouse-pointer me-1"></i>Click on the map to set coordinates automatically
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Bar -->
+    <div id="loadingOverlay" class="card shadow-sm mb-4 d-none">
+        <div class="card-body text-center py-4">
+            <div class="spinner-border text-primary mb-2" role="status" style="width:2rem;height:2rem;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <h6 class="fw-semibold mb-1">Fetching Historical Meteorological Data...</h6>
+            <p class="text-muted small mb-2">
+                Querying Open-Meteo archive year by year. Takes roughly 15–30 seconds.
+            </p>
+            <div class="progress" style="height:4px;max-width:350px;margin:0 auto;">
+                <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
+                     style="width:100%;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Section (hidden initially) -->
+    <div id="resultsSection" class="d-none">
+
+        <h5 class="fw-semibold mb-3">Analysis Results</h5>
+
+        <!-- Stat cards row -->
+        <div class="row g-3 mb-4" id="statsGrid"></div>
+
+        <!-- Tabs -->
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <ul class="nav nav-tabs mb-3" id="resultTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="tab-amdp-btn"
+                                data-bs-toggle="tab" data-bs-target="#tab-amdp"
+                                type="button" role="tab">
+                            <i class="fas fa-cloud-rain me-1"></i>AMDP Analysis
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tab-climate-btn"
+                                data-bs-toggle="tab" data-bs-target="#tab-climate"
+                                type="button" role="tab">
+                            <i class="fas fa-thermometer-half me-1"></i>Climate Variables
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tab-lstm-btn"
+                                data-bs-toggle="tab" data-bs-target="#tab-lstm"
+                                type="button" role="tab">
+                            <i class="fas fa-brain me-1"></i>Flood Prediction (LSTM)
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tab-data-btn"
+                                data-bs-toggle="tab" data-bs-target="#tab-data"
+                                type="button" role="tab">
+                            <i class="fas fa-table me-1"></i>Raw Data
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+
+                    <!-- AMDP Tab -->
+                    <div class="tab-pane fade show active" id="tab-amdp" role="tabpanel">
+                        <div class="mb-4" style="height:300px;">
+                            <canvas id="amdpChart"></canvas>
+                        </div>
+                        <div style="height:260px;">
+                            <canvas id="precipChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Climate Tab -->
+                    <div class="tab-pane fade" id="tab-climate" role="tabpanel">
+                        <div style="height:320px;">
+                            <canvas id="climateChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- LSTM Tab -->
+                    <div class="tab-pane fade" id="tab-lstm" role="tabpanel">
+                        <div class="alert alert-light border small mb-3" role="alert">
+                            <i class="fas fa-info-circle text-primary me-1"></i>
+                            Prediction based on a <strong>5-year sliding window</strong> (Khan &amp; Maity, 2020).
+                            A fixed +15% climate shift correction is applied post-1978 per Sarkar &amp; Maity (2021).
+                            Forecasts the next <strong>3 years</strong> of annual maximum daily precipitation.
+                        </div>
+
+                        <div id="lstmOverallRisk" class="mb-3"></div>
+
+                        <div class="mb-4" style="height:280px;">
+                            <canvas id="lstmChart"></canvas>
+                        </div>
+
+                        <h6 class="fw-semibold mb-2">Year-wise Forecast Table</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered table-hover align-middle">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Year</th>
+                                        <th>Predicted AMDP (mm)</th>
+                                        <th>Percentile</th>
+                                        <th>Risk Level</th>
+                                        <th>Model Confidence</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="lstmTableBody">
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted py-3">
+                                            Run the analysis first.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <p class="text-muted small mt-1" id="lstmMeta"></p>
+                    </div>
+
+                    <!-- Raw Data Tab -->
+                    <div class="tab-pane fade" id="tab-data" role="tabpanel">
+                        <div class="table-responsive" style="max-height:420px;">
+                            <table class="table table-sm table-striped table-bordered align-middle">
+                                <thead class="table-dark sticky-top">
+                                    <tr>
+                                        <th>Year</th>
+                                        <th>AMDP (mm)</th>
+                                        <th>Total Precip. (mm)</th>
+                                        <th>Avg Temp (°C)</th>
+                                        <th>Max Temp (°C)</th>
+                                        <th>Min Temp (°C)</th>
+                                        <th>Avg Wind (km/h)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dataTableBody">
+                                    <tr>
+                                        <td colspan="7" class="text-center text-muted py-3">No data yet.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div><!-- /tab-content -->
+            </div><!-- /card-body -->
+        </div><!-- /card -->
+    </div><!-- /resultsSection -->
+</div><!-- /container-xl -->
+
+
+<!-- CNN Weather Image Analyser -->
+<div id="cnn-section" class="border-top border-bottom bg-light py-4 mt-3">
+    <div class="container-xl px-4">
+        <h5 class="fw-bold mb-1">
+            <i class="fas fa-camera text-primary me-2"></i>CNN Weather Image Analyser
+        </h5>
+        <p class="text-muted small mb-3">
+            Upload an <strong>outdoor sky / field weather photograph</strong> to classify weather conditions
+            and get a hydrological risk assessment. The module extracts pixel-level features
+            (brightness distribution, RGB channel stats, edge intensity, cloud coverage) and maps them
+            to weather classes. Based on Maity, Srivastava, Sarkar &amp; Khan (2024).
+        </p>
+
+        <div class="row g-4">
+            <div class="col-md-5">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <input type="file" id="imageInput" accept="image/*" class="d-none">
+
+                        <div id="uploadZone" class="border border-2 rounded text-center p-4"
+                             style="cursor:pointer; border-color:#ccc !important; border-style:dashed !important;">
+                            <div style="font-size:2.2rem;" class="mb-2">📸</div>
+                            <p class="fw-medium mb-1">Click to upload or drag &amp; drop</p>
+                            <p class="text-muted small mb-0">
+                                Supports JPG, PNG, WebP.<br>
+                                <strong>Outdoor sky / weather photos only.</strong>
+                            </p>
+                        </div>
+
+                        <div id="imagePreviewContainer" class="mt-3 text-center d-none">
+                            <img id="imagePreview" class="img-fluid rounded border"
+                                 alt="Uploaded weather photo" style="max-height:200px;">
+                            <p class="text-muted small mt-1 mb-0">Image preview</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-7">
+                <div id="cnnResults">
+                    <div class="card shadow-sm h-100 d-flex align-items-center justify-content-center">
+                        <div class="card-body text-center text-muted">
+                            <div style="font-size:3rem;" class="mb-2">🌤️</div>
+                            <p class="mb-0">Upload a weather photo to see the analysis.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- References -->
+<div id="references" class="container-xl px-4 my-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-light fw-semibold">
+            Research References
+        </div>
+        <div class="card-body">
+            <ol class="small mb-3">
+                <li class="mb-2">
+                    Sarkar, S. &amp; Maity, R. (2020). Estimation of probable maximum precipitation
+                    in the context of climate change. <em>MethodsX</em>, 7, 100882.
+                </li>
+                <li class="mb-2">
+                    Sarkar, S. &amp; Maity, R. (2021). Global climate shift in 1970s causes a
+                    significant worldwide increase in precipitation extremes.
+                    <em>Scientific Reports</em>, 11, 11574.
+                </li>
+                <li class="mb-2">
+                    Khan, M.I. &amp; Maity, R. (2020). Hybrid deep learning approach for
+                    multi-step-ahead daily rainfall prediction using GCM simulations.
+                    <em>IEEE Access</em>, 8, 52774–52784.
+                </li>
+                <li class="mb-2">
+                    Khan, M.I., Sarkar, S. &amp; Maity, R. (2023). AI/ML techniques in
+                    hydroclimatology: Deep learning for streamflow under climate change.
+                    In <em>Visualization Techniques for Climate Change with ML and AI</em>.
+                    Elsevier, pp. 247–273.
+                </li>
+                <li>
+                    Maity, R., Srivastava, A., Sarkar, S. &amp; Khan, M.I. (2024).
+                    Revolutionizing the future of hydrological science: Impact of ML and DL
+                    amidst emerging explainable AI and transfer learning.
+                    <em>Applied Computing and Geosciences</em>, 24, 100206.
+                </li>
+            </ol>
+            <hr class="my-2">
+            <p class="small text-muted mb-0">
+                <strong>HydroIntel Pro</strong> — BTP-2 Project &nbsp;|&nbsp; IIT Kharagpur &nbsp;|&nbsp; 2024–25<br>
+                Meteorological data: Open-Meteo Historical Weather Archive (open-access).
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+<script src="js/lstm_flood_predictor.js"></script>
+<script src="js/cnn_weather_analyzer.js"></script>
+<script src="js/main.js"></script>
+
+</body>
+</html>

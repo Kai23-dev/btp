@@ -1,0 +1,14 @@
+venv
+__pycache__
+.pytest_cache
+.mypy_cache
+.git
+.venv
+*.pyc
+.DS_Store
+node_modules
+*.log
+*.sqlite3
+env/
+venv/
+*.env

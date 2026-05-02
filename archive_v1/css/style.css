@@ -1,0 +1,127 @@
+/* HydroIntel Pro — Custom stylesheet (Bootstrap 5 supplement) */
+/* Keeps Bootstrap as the base; this file only handles what Bootstrap doesn't cover */
+
+body {
+    font-family: 'Roboto', system-ui, -apple-system, sans-serif;
+    background-color: #f5f7fa;
+}
+
+/* ── Map height ──────────────────────────────────── */
+#map {
+    height: 360px;
+    border-radius: 0 0 4px 4px;
+}
+
+/* ── Upload zone hover ───────────────────────────── */
+#uploadZone:hover {
+    border-color: #1a3a6b !important;
+    background-color: #f0f4ff;
+}
+
+/* ── Chart canvas sizing ─────────────────────────── */
+canvas {
+    width: 100% !important;
+}
+
+/* ── LSTM table risk badges ──────────────────────── */
+.risk-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+.badge-danger  { background: #f8d7da; color: #842029; }
+.badge-warning { background: #fff3cd; color: #664d03; }
+.badge-info    { background: #cff4fc; color: #055160; }
+.badge-success { background: #d1e7dd; color: #0a3622; }
+
+/* ── CNN result card ─────────────────────────────── */
+.cnn-result-block {
+    padding: 1rem;
+}
+.cnn-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+.cnn-icon {
+    font-size: 2.5rem;
+    line-height: 1;
+}
+.cnn-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.85rem;
+}
+.cnn-bar-label {
+    width: 110px;
+    color: #6c757d;
+    flex-shrink: 0;
+}
+.cnn-bar-bg {
+    flex: 1;
+    background: #e9ecef;
+    border-radius: 4px;
+    height: 8px;
+    overflow: hidden;
+}
+.cnn-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+.cnn-bar-val {
+    width: 55px;
+    text-align: right;
+    font-weight: 600;
+}
+
+/* ── Outdoor notice ──────────────────────────────── */
+.outdoor-notice {
+    background: #fff8e1;
+    border: 1px solid #ffd54f;
+    border-radius: 4px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+    color: #5d4037;
+    margin-bottom: 0.75rem;
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* ── Implications table inside CNN card ──────────── */
+.cnn-implications {
+    background: #f8f9fa;
+    border-radius: 4px;
+    padding: 0.75rem;
+    font-size: 0.83rem;
+    margin-bottom: 0.5rem;
+}
+.cnn-implications .row-item {
+    margin-bottom: 0.25rem;
+    color: #495057;
+}
+
+/* ── Small utility tweaks ────────────────────────── */
+.border-start.border-4 {
+    border-left-width: 4px !important;
+}
+
+.nav-tabs .nav-link {
+    font-size: 0.88rem;
+    color: #495057;
+}
+.nav-tabs .nav-link.active {
+    font-weight: 600;
+    color: #1a3a6b;
+    border-bottom-color: #1a3a6b;
+}
+
+.table th, .table td {
+    font-size: 0.85rem;
+    vertical-align: middle;
+}

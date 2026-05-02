@@ -1,16 +1,4 @@
-/**
- * Main Application JavaScript for Hydrological Parameter Calculator
- * Handles UI interactions and coordinates between different modules
- *
- * This application implements methodologies from:
- * 1. Sarkar & Maity (2021) - Global climate shift in 1970s
- * 2. Hussain et al. (2021) - Estimation of hydrogeological parameters
- *
- * Author: Hydrological Research Team
- * Date: 2023
- */
 
-// Global variables for application state
 const appState = {
   map: null,
   marker: null,
@@ -20,9 +8,8 @@ const appState = {
   isLoading: false
 };
 
-// DOM elements cache for performance
 const elements = {
-  // Form elements
+
   locationForm: document.getElementById('locationForm'),
   latitudeInput: document.getElementById('latitude'),
   longitudeInput: document.getElementById('longitude'),
@@ -51,7 +38,7 @@ const elements = {
 };
 
 // Initialize application when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
   initializeApp();
 });
 
@@ -464,7 +451,7 @@ function addMapFullscreen() {
     position: 'topright'
   });
 
-  fullscreenControl.onAdd = function(map) {
+  fullscreenControl.onAdd = function (map) {
     const div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
     const button = L.DomUtil.create('button', '', div);
     button.innerHTML = '<i class="fas fa-expand"></i>';
@@ -475,7 +462,7 @@ function addMapFullscreen() {
     button.style.cursor = 'pointer';
     button.title = 'Toggle Fullscreen';
 
-    button.onclick = function() {
+    button.onclick = function () {
       toggleMapFullscreen();
     };
 
@@ -522,7 +509,7 @@ function addMapLegend(legendData, options = {}) {
     position: options.position || 'bottomright'
   });
 
-  legend.onAdd = function(map) {
+  legend.onAdd = function (map) {
     const div = L.DomUtil.create('div', 'info legend');
     div.style.backgroundColor = 'white';
     div.style.padding = '10px';
@@ -602,7 +589,7 @@ function generateCSVContent(data) {
  */
 function updateChart(chartId, newData) {
   const chart = appState.charts[chartId];
-  
+
   if (!chart) {
     console.warn(`Chart with ID ${chartId} not found`);
     return;
@@ -636,3 +623,6 @@ window.utilityFunctions = {
   scrollToSection,
   generateCSVContent
 };
+
+
+

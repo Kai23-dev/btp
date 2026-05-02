@@ -65,11 +65,17 @@ function calculateHydrologicalParameters(latitude, longitude, startYear, endYear
  * @param {number} endYear - End year of analysis
  * @returns {Array} - Array of yearly data
  */
+function seededRandom(seed) {
+    const x = Math.sin(seed) * 10000;
+    return x - Math.floor(x);
+}
+
 function generateMockData(latitude, longitude, startYear, endYear) {
-    const basePrecip = 1000 + (Math.abs(latitude) < 30 ? 500 : 0) + (Math.random() - 0.5) * 500;
-    const baseTemp = 25 - Math.abs(latitude) * 0.5 + (Math.random() - 0.5) * 5;
-    const baseHumidity = 60 + (Math.abs(latitude) < 30 ? 20 : 0) + (Math.random() - 0.5) * 20;
-    const baseWind = 3 + (Math.random() - 0.5) * 2;
+    const locationSeed = Math.abs(Math.round(latitude * 1000 + longitude * 1000));
+    const basePrecip = 1000 + (Math.abs(latitude) < 30 ? 500 : 0);
+    const baseTemp = 25 - Math.abs(latitude) * 0.5;
+    const baseHumidity = 60 + (Math.abs(latitude) < 30 ? 20 : 0);
+    const baseWind = 3;
     
     const data = [];
     const years = endYear - startYear + 1;
@@ -79,18 +85,19 @@ function generateMockData(latitude, longitude, startYear, endYear) {
         
         // Add climate shift effect after 1978
         const shiftFactor = year > 1978 ? 1.15 : 1.0;
+        const yearSeed = locationSeed + year;
         
-        // Generate annual precipitation with some randomness
-        const annualPrecip = basePrecip * shiftFactor * (0.8 + Math.random() * 0.4);
+        // Generate annual precipitation with deterministic variation so same location/year range gives same outputs
+        const annualPrecip = basePrecip * shiftFactor * (0.8 + seededRandom(yearSeed * 17) * 0.4);
         
         // Generate AMDP (typically 5-15% of annual precipitation)
-        const amdpRatio = 0.05 + Math.random() * 0.1;
+        const amdpRatio = 0.05 + seededRandom(yearSeed * 31) * 0.1;
         const amdp = annualPrecip * amdpRatio * shiftFactor;
         
-        // Generate climate variables
-        const avgTemp = baseTemp + (Math.random() - 0.5) * 3 + (year > 1978 ? 0.5 : 0);
-        const avgHumidity = baseHumidity + (Math.random() - 0.5) * 10;
-        const avgWindSpeed = baseWind + (Math.random() - 0.5) * 1;
+        // Generate climate variables with deterministic year-based components
+        const avgTemp = baseTemp + (seededRandom(yearSeed * 13) - 0.5) * 3 + (year > 1978 ? 0.5 : 0);
+        const avgHumidity = baseHumidity + (seededRandom(yearSeed * 19) - 0.5) * 10;
+        const avgWindSpeed = baseWind + (seededRandom(yearSeed * 23) - 0.5) * 1;
         
         data.push({
             year,
