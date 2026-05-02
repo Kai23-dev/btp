@@ -133,9 +133,9 @@ def calculate_local_hershfield_km(amdp_values):
 
     if S > 0:
         km = (Xmax - Xmean) / S
-        # Bound the local Km to a practical range for Indian stations (typically 2 to 6)
-        return max(2.0, min(6.0, km))
-    return 6.0
+        # Bound the local Km to a practical range for Indian stations (typically 5 to 15)
+        return max(5.0, min(15.0, km))
+    return 15.0
 
 
 
