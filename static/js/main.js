@@ -314,9 +314,10 @@ function renderStats(r) {
           <div class="card-body">
             <p class="text-muted small mb-1">Probable Maximum Precipitation (PMP)</p>
             <h3 class="fw-bold mb-1">${r.pmpAdj.toFixed(1)} mm</h3>
+            <p class="small text-muted mb-1"><strong>K<sub>m</sub> (Frequency Factor):</strong> ${r.Km.toFixed(2)}</p>
+            <p class="small text-muted mb-1"><strong>Full Record:</strong> ${r.pmpRecordYears} yrs (${r.pmpStartYear}–${r.pmpEndYear})</p>
             <p class="small text-muted mb-1"><strong>Formula:</strong> ${r.meanPmpAMDP.toFixed(1)} + (${r.Km.toFixed(2)} &times; ${r.stdPmpAMDP.toFixed(1)})</p>
-            <p class="small text-muted mb-1">Record: ${r.pmpStartYear}–${r.pmpEndYear} (${r.pmpRecordYears} yrs, location-fixed)</p>
-            ${r.climAdj > 0 ? `<span class="badge text-bg-warning">+${(r.climAdj*100).toFixed(1)}% climate adj.</span>` : '<span class="badge text-bg-success">No climate adjustment</span>'}
+            ${r.climAdj > 0 ? `<span class="badge text-bg-warning mt-1">+${(r.climAdj*100).toFixed(1)}% climate adj.</span>` : ''}
           </div>
         </div>
       </div>
