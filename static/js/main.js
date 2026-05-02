@@ -314,7 +314,7 @@ function renderStats(r) {
           <div class="card-body">
             <p class="text-muted small mb-1">Probable Maximum Precipitation (PMP)</p>
             <h3 class="fw-bold mb-1">${r.pmpAdj.toFixed(1)} mm</h3>
-            <p class="small text-muted mb-1">Km = ${r.Km.toFixed(2)} &nbsp;|&nbsp; Hershfield envelope (Sarkar &amp; Maity 2020)</p>
+            <p class="small text-muted mb-1"><strong>Formula:</strong> ${r.meanPmpAMDP.toFixed(1)} + (${r.Km.toFixed(2)} &times; ${r.stdPmpAMDP.toFixed(1)})</p>
             <p class="small text-muted mb-1">Record: ${r.pmpStartYear}–${r.pmpEndYear} (${r.pmpRecordYears} yrs, location-fixed)</p>
             ${r.climAdj > 0 ? `<span class="badge text-bg-warning">+${(r.climAdj*100).toFixed(1)}% climate adj.</span>` : '<span class="badge text-bg-success">No climate adjustment</span>'}
           </div>
@@ -323,10 +323,10 @@ function renderStats(r) {
       <div class="col-sm-6 col-xl-3">
         <div class="card border-start border-success border-4 shadow-sm h-100">
           <div class="card-body">
-            <p class="text-muted small mb-1">Mean AMDP (Selected Period)</p>
+            <p class="text-muted small mb-1">Selected Analysis Window Mean</p>
             <h3 class="fw-bold mb-1">${r.meanAMDP.toFixed(1)} mm</h3>
             <p class="small text-muted mb-0">${r.startYear}–${r.endYear} &nbsp;|&nbsp; ${r.selectedYears} years</p>
-            <p class="small text-muted mb-0">Std Dev: ${r.stdAMDP.toFixed(1)} mm</p>
+            <p class="small text-muted mb-0">Window Std Dev: ${r.stdAMDP.toFixed(1)} mm</p>
           </div>
         </div>
       </div>
