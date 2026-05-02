@@ -34,6 +34,21 @@ def calculate_trend(values):
     den = sum((x[i] - x_mean) ** 2 for i in range(n))
     return num / den if den != 0 else 0
 
+from datetime import datetime
+from collections import defaultdict
+
+def fetch_yearly_data(lat, lon, start_year, end_year):
+    start_date = f"{start_year}-01-01"
+    end_date = f"{end_year}-12-31"
+    
+    url = (
+        "https://archive-api.open-meteo.com/v1/archive?"
+        f"latitude={lat}&longitude={lon}&"
+        f"start_date={start_date}&end_date={end_date}&"
+        "daily=temperature_2m_max,temperature_2m_min,temperature_2m_mean,precipitation_sum,windspeed_10m_max&"
+        "timezone=auto"
+    )
+    
     try:
         resp = requests.get(url, timeout=30)
         if resp.status_code != 200:
