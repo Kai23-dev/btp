@@ -126,10 +126,10 @@ def calculate_local_hershfield_km(amdp_values):
     
     if rest:
         Xmean = calculate_mean(rest)
-        S = max(calculate_std(rest), eps)
+        S = max(calculate_std(rest), 1e-6)
     else:
         Xmean = mean
-        S = max(std, eps)
+        S = max(std, 1e-6)
 
     if S > 0:
         km = (Xmax - Xmean) / S
